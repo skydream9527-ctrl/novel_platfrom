@@ -1,0 +1,88 @@
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--success);
+  margin: 8px 0;
+  font-size: 13px;
+  max-width: 580px;
+}
+.tool-warning {
+  border-left-color: var(--warning);
+}
+.tool-error {
+  border-left-color: var(--error);
+}
+.tool-info {
+  border-left-color: var(--info);
+}
+.tool-success {
+  border-left-color: var(--success);
+}
+.tool-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.tool-toggle {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tool-args {
+  background: var(--surface-2);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 6px 0;
+  max-height: 200px;
+  overflow: auto;
+}
+.tool-result {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.tool-result.success {
+  background: var(--success-dim);
+  color: var(--success);
+}
+.tool-result.fail {
+  background: var(--error-dim);
+  color: var(--error);
+}
+.tool-error-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.tool-fail-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.btn-mini {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px 9px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.btn-mini:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}

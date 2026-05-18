@@ -1,0 +1,127 @@
+sections:
+  - order: 1
+    name: 结论
+    required: true
+    description: 结论先行，明确给出放量/不放量/继续观察的判断
+    content:
+      - 放量建议
+      - 核心理由
+      - 关键数据支撑
+    role_adaptive:
+      pm:
+        show: 结论 + 建议 + 关键数据
+        detail_level: summary
+      analyst:
+        show: 结论 + 建议 + 统计依据
+        detail_level: detailed
+
+  - order: 2
+    name: 核心数据表现
+    required: true
+    description: 核心指标全量数据，标注变化方向与幅度
+    content:
+      - 规模指标：方向 + 幅度 + 置信区间
+      - 消费指标：方向 + 幅度 + 置信区间
+      - 收入指标：方向 + 幅度 + 置信区间
+      - 可视化图表
+    charts:
+      - type: bar_chart
+        description: 各核心指标变化幅度对比图
+      - type: table
+        description: 核心指标详细数据表（对照组均值、实验组均值、变化幅度、p值、置信区间）
+    role_adaptive:
+      pm:
+        show: 方向 + 幅度 + 图表
+        detail_level: summary
+        hide:
+          - p值
+          - 置信区间
+          - 检验方法
+      analyst:
+        show: 方向 + 幅度 + 置信区间 + p值 + 图表
+        detail_level: detailed
+        show_all: true
+
+  - order: 3
+    name: 直接指标数据表现
+    required: true
+    description: 直接指标数据，须指向并能解释核心指标变化
+    content:
+      - 各直接指标：方向 + 幅度 + 置信区间
+      - 因果链路验证结果
+      - 可视化图表
+    charts:
+      - type: bar_chart
+        description: 各直接指标变化幅度对比图
+      - type: flow_diagram
+        description: 因果链路验证流程图（关键变量→直接指标→核心指标）
+    role_adaptive:
+      pm:
+        show: 方向 + 幅度 + 是否符合预期
+        detail_level: summary
+      analyst:
+        show: 完整统计细节 + 因果链路验证过程
+        detail_level: detailed
+        show_all: true
+
+  - order: 4
+    name: 下钻分析
+    required: conditional
+    condition: 核心指标下降 OR 直接指标不符合预期
+    description: 当核心指标或直接指标不符合预期时，分析原因
+    content:
+      - 下钻假设
+      - 下钻数据
+      - 问题定位
+      - 可视化图表
+    charts:
+      - type: bar_chart
+        description: 下钻维度数据对比图
+      - type: table
+        description: 下钻维度详细数据表
+    role_adaptive:
+      pm:
+        show: 问题定位 + 业务建议
+        detail_level: summary
+      analyst:
+        show: 假设 + 数据 + 定位 + 统计细节
+        detail_level: detailed
+        show_all: true
+
+  - order: 5
+    name: 附录
+    required: true
+    description: 补充信息，供需要深入了解的用户查阅
+    content:
+      - AA基线扣除详情
+      - SRM校验结果
+      - 统计功效校验结果
+      - 统计检验方法说明
+      - 数据来源说明
+    role_adaptive:
+      pm:
+        show: 折叠
+        detail_level: minimal
+        default_collapsed: true
+      analyst:
+        show: 展开
+        detail_level: detailed
+        default_collapsed: false
+
+report_meta:
+  title_template: "AB实验分析报告 - {experiment_id} - {phase}阶段"
+  include_header:
+    - 实验ID
+    - 关键变量
+    - 放量阶段
+    - 分析日期
+    - 数据时间范围
+  include_footer:
+    - 分析工具版本
+    - 知识库版本
+
+changelog:
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，定义5个报告模块及角色自适应规则

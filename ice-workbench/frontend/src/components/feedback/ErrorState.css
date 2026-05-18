@@ -1,0 +1,62 @@
+.error-state,
+.empty-state {
+  text-align: center;
+  padding: 36px 24px;
+  color: var(--text-dim);
+}
+.es-icon,
+.es-illust {
+  font-size: 36px;
+  margin-bottom: 14px;
+}
+.es-illust {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.es-title {
+  font-family: var(--font-head);
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.es-desc {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.es-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.es-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.skel-line {
+  height: 14px;
+  border-radius: 4px;
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-3) 0%,
+    var(--surface-2) 50%,
+    var(--surface-3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skel-line + .skel-line {
+  margin-top: 8px;
+}
+.skel-line.short {
+  width: 60%;
+}

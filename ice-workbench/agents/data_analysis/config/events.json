@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260417",
+    "type": "version_release",
+    "description": "浏览器 v15.6.0 发布",
+    "business_line": "browser-main"
+  },
+  {
+    "date": "20260415",
+    "type": "operation",
+    "description": "信息流双周活动上线",
+    "business_line": "browser-feed"
+  }
+]

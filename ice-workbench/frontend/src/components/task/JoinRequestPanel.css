@@ -1,0 +1,299 @@
+.jrp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text);
+}
+
+/* Viewer */
+.jrp-viewer {
+  padding: 8px 0;
+}
+
+.jrp-submit-btn {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.jrp-submit-btn:hover {
+  background: var(--primary-hover);
+}
+
+.jrp-viewer-submitted {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm, 6px);
+  text-align: center;
+}
+
+/* Dialog */
+.jrp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.jrp-dialog {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 20px 40px var(--shadow, rgba(0, 0, 0, 0.4));
+  display: flex;
+  flex-direction: column;
+}
+
+.jrp-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.jrp-dialog-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jrp-dialog-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.jrp-dialog-close:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.jrp-dialog-body {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jrp-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.jrp-textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.jrp-textarea:focus {
+  border-color: var(--primary);
+}
+
+.jrp-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 18px 14px;
+}
+
+.jrp-btn-ghost,
+.jrp-btn-primary {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.jrp-btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.jrp-btn-ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.jrp-btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.jrp-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.jrp-btn-ghost:disabled,
+.jrp-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Owner */
+.jrp-owner {
+  padding: 6px 0;
+}
+
+.jrp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.jrp-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jrp-refresh {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.jrp-refresh:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.jrp-status {
+  padding: 14px 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.jrp-error {
+  color: var(--danger, var(--error));
+}
+
+.jrp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jrp-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface);
+}
+
+.jrp-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jrp-item-user {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jrp-item-msg {
+  font-size: 12px;
+  color: var(--text-dim);
+  word-break: break-word;
+}
+
+.jrp-muted {
+  color: var(--text-muted, var(--text-dim));
+  font-style: italic;
+}
+
+.jrp-item-meta {
+  font-size: 11px;
+  color: var(--text-muted, var(--text-dim));
+}
+
+.jrp-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.jrp-btn-approve,
+.jrp-btn-reject {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.jrp-btn-approve {
+  background: var(--success, #5bb98c);
+  color: #fff;
+}
+
+.jrp-btn-approve:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.jrp-btn-reject {
+  background: transparent;
+  color: var(--danger, var(--error));
+  border-color: var(--danger, var(--error));
+}
+
+.jrp-btn-reject:hover:not(:disabled) {
+  background: var(--error-dim, rgba(201, 123, 123, 0.12));
+}
+
+.jrp-btn-approve:disabled,
+.jrp-btn-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

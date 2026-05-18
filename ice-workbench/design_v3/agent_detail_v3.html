@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · Agent 详情 (v3)</title>
+<!-- 对应决策：D63-D70 · 按角色拆分 + 主 CTA + 内嵌 Prompt 调试 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-hover:#f0a06e;--primary-dim:rgba(232,145,90,.12);
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-ab:#7bafd4;--p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --p-ab-dim:rgba(123,175,212,.12);--p-data-dim:rgba(107,170,142,.12);--p-wave-dim:rgba(201,123,123,.12);
+  --success:#5bb98c;--warning:#d4a34e;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5}
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+.back{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;border-radius:7px;cursor:pointer}
+.breadcrumb{font-size:13px;color:var(--text-dim)}
+.breadcrumb .sep{color:var(--text-muted);margin:0 6px}
+.breadcrumb .current{color:var(--text)}
+.right-actions{margin-left:auto;display:flex;gap:8px}
+.icon-btn{background:transparent;border:none;color:var(--text-dim);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+
+.page{max-width:1080px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:24px}
+
+/* Agent 信息卡 */
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;
+  position:relative;overflow:hidden}
+.info-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--p-biz)}
+.info-row{display:flex;align-items:flex-start;gap:18px}
+.agent-icon{width:64px;height:64px;border-radius:14px;background:var(--p-biz-dim);
+  display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
+.agent-info{flex:1}
+.agent-info h1{font-family:'Sora',sans-serif;font-size:22px;margin:0 0 6px}
+.agent-info p{color:var(--text-dim);font-size:14px;margin:0 0 10px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{padding:3px 10px;border-radius:5px;font-size:11px;font-weight:500}
+.badge.builtin{background:var(--agent-dim);color:var(--agent)}
+.badge.paradigm{background:var(--p-biz-dim);color:var(--p-biz)}
+.cta{background:var(--primary);color:#1a1a1a;padding:10px 18px;border-radius:8px;
+  font-weight:600;border:none;cursor:pointer;font-size:14px;font-family:inherit;
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+.cta:hover{background:var(--primary-hover)}
+
+/* Section */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.section h2{font-family:'Sora',sans-serif;font-size:16px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.section h2 .count{color:var(--text-muted);font-size:12px;font-weight:normal}
+
+/* Skills */
+.skill-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.skill-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px}
+.skill-card .head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.skill-card .ico{font-size:18px}
+.skill-card .name{font-weight:500;font-size:13px}
+.skill-card .cat{font-size:10px;background:var(--surface-3);padding:1px 6px;border-radius:3px;color:var(--text-muted);display:inline-block;margin-bottom:6px}
+.skill-card .desc{font-size:11px;color:var(--text-dim);line-height:1.5}
+
+/* 经验卡片（仅 approved，只读 D66） */
+.exp-list{display:flex;flex-direction:column;gap:10px}
+.exp-card{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--success);
+  border-radius:8px;padding:12px 14px}
+.exp-title{font-weight:500;font-size:13px;margin-bottom:6px}
+.exp-meta{font-size:11px;color:var(--text-muted)}
+
+/* 公共任务案例 (D69) */
+.case-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.case-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;position:relative;overflow:hidden}
+.case-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--p-biz)}
+.case-card .name{font-weight:500;font-size:13px;margin:4px 0 6px}
+.case-card .meta{display:flex;gap:8px;font-size:11px;color:var(--text-muted);margin-top:8px}
+
+/* 🛡 管理区（仅 admin 可见 D70） */
+.admin-section{background:linear-gradient(135deg,rgba(155,142,196,.05),rgba(212,163,78,.03));
+  border:1px solid var(--agent);border-radius:14px;padding:20px}
+.admin-section h2{color:var(--agent)}
+.admin-section h2::before{content:"🛡";margin-right:6px}
+.admin-actions{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.admin-actions button{background:var(--agent-dim);border:1px solid var(--agent);color:var(--agent);
+  padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500}
+.admin-actions button:hover{background:rgba(155,142,196,.2)}
+
+/* 内嵌 Prompt 编辑器 + 测试沙盒 (D68) */
+.prompt-debug{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.prompt-editor,.test-sandbox{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;min-height:280px}
+.prompt-editor h3,.test-sandbox h3{font-size:12px;color:var(--text-muted);margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace}
+.prompt-editor textarea{flex:1;background:transparent;border:none;color:var(--text);padding:10px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;resize:none;outline:none}
+.prompt-stat{padding:6px 12px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border);display:flex;justify-content:space-between}
+.test-sandbox .messages{flex:1;padding:10px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.test-msg{padding:6px 10px;border-radius:6px;font-size:12px;max-width:80%}
+.test-msg.user{align-self:flex-end;background:var(--primary-dim);color:var(--primary)}
+.test-msg.assistant{align-self:flex-start;background:var(--surface-2);color:var(--text-dim)}
+.test-input{display:flex;gap:6px;padding:8px;border-top:1px solid var(--border)}
+.test-input input{flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-family:inherit;font-size:12px}
+.test-input button{background:var(--primary);color:#1a1a1a;border:none;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600}
+
+/* 草稿审批 */
+.draft-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.draft-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--warning);
+  border-radius:8px;padding:10px 12px}
+.draft-title{font-weight:500;font-size:13px;margin-bottom:6px}
+.draft-meta{font-size:10px;color:var(--text-muted);margin-bottom:8px}
+.draft-actions{display:flex;gap:6px}
+.draft-actions button{padding:4px 10px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:11px;font-family:inherit}
+.draft-actions .approve{background:var(--success);color:#fff;border-color:var(--success)}
+.draft-actions .reject{background:transparent;color:var(--p-wave)}
+
+/* Folding panels in admin */
+.fold{margin-top:12px}
+.fold-head{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;
+  padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.fold-head:hover{border-color:var(--primary)}
+.fold-body{display:none;padding:12px;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px}
+.fold.open .fold-body{display:block}
+.fold.open .fold-head{border-radius:8px 8px 0 0}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <button class="back">←</button>
+  <div class="breadcrumb">
+    首页 <span class="sep">/</span> 团队资产 <span class="sep">/</span> Agent <span class="sep">/</span> <span class="current">经营洞察 Agent</span>
+  </div>
+  <div class="right-actions">
+    <button class="icon-btn">🌓</button>
+    <button class="icon-btn">🔔</button>
+  </div>
+</nav>
+
+<div class="page">
+  <!-- Agent 信息卡 + 主 CTA (D65) -->
+  <div class="info-card">
+    <div class="info-row">
+      <div class="agent-icon">📈</div>
+      <div class="agent-info">
+        <h1>经营洞察 Agent</h1>
+        <p>经营数据拆解归因与趋势洞察，帮助团队快速定位业务问题</p>
+        <div class="badges">
+          <span class="badge builtin">系统预置</span>
+          <span class="badge paradigm">经营分析范式</span>
+        </div>
+      </div>
+      <button class="cta">+ 用此 Agent 创建任务</button>
+    </div>
+  </div>
+
+  <!-- 能力（绑定 Skills）-->
+  <section class="section">
+    <h2>⚡ 能力 <span class="count">绑定 4 个 Skills</span></h2>
+    <div class="skill-grid">
+      <div class="skill-card"><div class="head"><span class="ico">🔍</span><span class="name">指标拆解</span></div><span class="cat">分析</span><div class="desc">将复合指标按维度拆解为子指标</div></div>
+      <div class="skill-card"><div class="head"><span class="ico">📊</span><span class="name">趋势分析</span></div><span class="cat">分析</span><div class="desc">时间序列趋势识别与预测</div></div>
+      <div class="skill-card"><div class="head"><span class="ico">🎯</span><span class="name">归因分析</span></div><span class="cat">分析</span><div class="desc">多维度变化归因定位</div></div>
+      <div class="skill-card"><div class="head"><span class="ico">📝</span><span class="name">报告生成</span></div><span class="cat">输出</span><div class="desc">结构化分析报告自动生成</div></div>
+    </div>
+  </section>
+
+  <!-- 经验卡片 仅 approved (D66) -->
+  <section class="section">
+    <h2>✨ Agent 学到的经验 <span class="count">3 条已批准</span></h2>
+    <div class="exp-list">
+      <div class="exp-card">
+        <div class="exp-title">渠道归因应优先检查自然流量和推荐渠道的版本影响</div>
+        <div class="exp-meta">引用 23 次 · 批准于 2026-04-28</div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-title">季度报告需包含同比和环比两个维度的对比</div>
+        <div class="exp-meta">引用 11 次 · 批准于 2026-04-20</div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-title">归因分析完成后，需要对比历史同期数据验证结论可靠性</div>
+        <div class="exp-meta">引用 7 次 · 批准于 2026-04-15</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 实际案例 (D69) -->
+  <section class="section">
+    <h2>💡 实际案例 <span class="count">最近使用此 Agent 的 3 个公共任务</span></h2>
+    <div class="case-grid">
+      <div class="case-card">
+        <div class="name">月度经营复盘模板</div>
+        <div class="meta">👤 张明远 · ⭐ 8 复用</div>
+      </div>
+      <div class="case-card">
+        <div class="name">渠道归因分析</div>
+        <div class="meta">👤 张明远 · ⭐ 12 复用</div>
+      </div>
+      <div class="case-card">
+        <div class="name">季度收入拆解</div>
+        <div class="meta">👤 李思涵 · ⭐ 6 复用</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🛡 管理区（仅 admin D70） -->
+  <section class="admin-section">
+    <h2>管理区<span class="count" style="margin-left:auto;color:var(--agent)">仅超级管理员 / 管理员可见</span></h2>
+
+    <div class="admin-actions">
+      <button>📝 编辑 Prompt</button>
+      <button>🧪 测试对话</button>
+      <button>📜 版本历史 (8)</button>
+    </div>
+
+    <!-- 内嵌 Prompt 编辑 + 测试沙盒 (D68) -->
+    <div class="prompt-debug">
+      <div class="prompt-editor">
+        <h3>System Prompt</h3>
+        <textarea>你是一名专业的经营分析 Agent，帮助产品团队从经营数据中发现关键洞察。
+
+核心原则：
+1. 数据查询必须先确认指标口径
+2. 渠道归因优先检查自然流量与推荐渠道的版本影响
+3. 季度报告必须包含同比和环比
+
+工作流程：
+- 需求澄清 → 指标确认 → SQL 生成 → 数据查询 → 多维拆解 → 归因分析 → 报告生成
+...</textarea>
+        <div class="prompt-stat">
+          <span>1,254 字符 · ~315 tokens</span>
+          <span style="color:var(--success)">已保存</span>
+        </div>
+      </div>
+
+      <div class="test-sandbox">
+        <h3>🧪 测试沙盒（不入库不计费）</h3>
+        <div class="messages">
+          <div class="test-msg user">分析 Q2 各渠道 DAU 变化</div>
+          <div class="test-msg assistant">[模拟]好的，我来帮你分析 Q2 各渠道 DAU 变化。先确认数据源：你是想看自然流量、推荐渠道、付费渠道，还是全部？时间范围是 2026-04 到 2026-06 完整 Q2 吗？</div>
+          <div class="test-msg user">全部渠道，整个 Q2</div>
+          <div class="test-msg assistant">[模拟]明白。我会用如下 SQL 拉取数据...</div>
+        </div>
+        <div class="test-input">
+          <input placeholder="输入测试消息..." />
+          <button>发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 草稿审批 -->
+    <div class="fold open">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">▾ 草稿经验卡片审批 (1)</div>
+      <div class="fold-body">
+        <div class="draft-list">
+          <div class="draft-card">
+            <div class="draft-title">付费率分析需要排除促销活动期间的异常数据</div>
+            <div class="draft-meta">来自对话 #58 · 自动提炼 · 1 小时前</div>
+            <div class="draft-actions">
+              <button class="approve">通过</button>
+              <button class="reject">驳回（需输入原因）</button>
+              <button>编辑</button>
+              <button>查看原文对话</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fold">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">▸ Agent 记忆 (12)</div>
+    </div>
+
+    <div class="fold">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">▸ 进化日志</div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+version: "1.0"
+description: AB实验分析知识库全局索引
+
+directories:
+  - name: rules
+    description: 分析规则与决策逻辑
+    load_strategy: required
+    files:
+      - aa_rules.yaml
+      - decision_matrix.yaml
+      - rollout_phases.yaml
+
+  - name: metrics
+    description: 指标定义与SQL查询模板
+    load_strategy: required
+    files:
+      - core_metrics.yaml
+      - sql_templates/index.yaml
+    on_demand:
+      - sql_templates/browser_main.yaml
+      - sql_templates/browser_feed.yaml
+      - sql_templates/content_center.yaml
+      - sql_templates/common.yaml
+
+  - name: event_tracking
+    description: 埋点事件知识库（SQLite + 索引YAML）
+    load_strategy: on_demand
+    query_method: sqlite3
+    files:
+      - event_tracking.yaml
+      - event_tracking.db
+      - browser_event_tracking.yaml
+      - browser_event_tracking.db
+
+  - name: analysis
+    description: 分析方法论与历史经验
+    load_strategy: required
+    files:
+      - drill_knowledge.yaml
+      - cases_and_lessons.yaml
+
+  - name: product_model
+    description: 产品结构模型与报告规范
+    load_strategy: required
+    files:
+      - page_structure.yaml
+      - report_template.yaml

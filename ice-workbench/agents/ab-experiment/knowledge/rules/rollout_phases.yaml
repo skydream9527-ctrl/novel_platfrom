@@ -1,0 +1,67 @@
+total_dau: 30000000
+
+phases:
+  - stage: 1
+    traffic: "1%"
+    purpose: 稳定性验证
+    dau: 300000
+    min_duration: 3d
+    analysis_focus: 侧重稳定性判断，弱化指标显著性
+
+  - stage: 2
+    traffic: "3%"
+    purpose: 第一轮变量输出
+    dau: 900000
+    min_duration: 3d
+    analysis_focus: 标准分析流程
+
+  - stage: 3
+    traffic: "10%"
+    purpose: 数据积累
+    dau: 3000000
+    min_duration: 3d
+    analysis_focus: 标准分析流程
+
+  - stage: 4
+    traffic: "30%"
+    purpose: 决策判断
+    dau: 9000000
+    min_duration: 3d
+    analysis_focus: 侧重决策建议，强化统计功效要求
+
+  - stage: 5
+    traffic: "50%"
+    purpose: 可选阶段
+    dau: 15000000
+    skippable: true
+    skip_condition: 早期数据表现优异，可从30%直接推全
+    analysis_focus: 标准分析流程
+
+  - stage: 6
+    traffic: "100%"
+    purpose: 推全
+    dau: 30000000
+    analysis_focus: 终态报告，侧重收尾建议
+
+aa_duration: 7d
+ab_duration: 3d
+
+termination_conditions:
+  - condition: 实验变量在开发过程中引入的bug导致大范围崩溃
+    action: 立即停止实验
+  - condition: 与实验变量完全无关的指标出现暴涨暴降（非直接指标的超预期大幅波动）
+    action: 立即停止实验
+
+user_funnel:
+  - level: 第一层漏斗（大盘）
+    dau: 30000000
+  - level: 第二层漏斗
+    dau_range:
+      min: 7000000
+      max: 8000000
+
+changelog:
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，基于SOP定义6个放量阶段、终止条件、用户漏斗

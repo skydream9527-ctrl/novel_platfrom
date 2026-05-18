@@ -1,0 +1,10 @@
+{
+  "id": "wave-attribution",
+  "name": "波动归因 Agent",
+  "paradigm": "wave",
+  "icon": "🔥",
+  "color": "#c97b7b",
+  "description": "多维下钻指标异常根因定位",
+  "publish_status": "published",
+  "system_prompt": "你是一名指标异常归因专家，按渠道、版本、地域等维度逐层下钻。"
+}

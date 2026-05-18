@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · Agent 编辑 (v3)</title>
+<!-- 对应决策：D113-D114 · 4 Tab Edit + Prompt 版本历史 + 测试沙盒 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-data:#6baa8e;
+  --success:#5bb98c;--success-dim:rgba(91,185,140,.12);
+  --warning:#d4a34e;--warning-dim:rgba(212,163,78,.12);
+  --error:#c97b7b;--error-dim:rgba(201,123,123,.12);
+  --info:#7bafd4;--info-dim:rgba(123,175,212,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5}
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.back{background:var(--surface-2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:7px;cursor:pointer}
+.crumb{font-size:13px;color:var(--text-dim)}.crumb .current{color:var(--text)}
+.head-actions{margin-left:auto}
+.btn-save{background:var(--primary);color:#1a1a1a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit}
+
+.page-head{padding:24px 32px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border)}
+.agent-icon{width:48px;height:48px;border-radius:12px;background:var(--p-biz-dim);
+  display:flex;align-items:center;justify-content:center;font-size:24px}
+.page-head h1{font-family:'Sora',sans-serif;font-size:20px;margin:0 0 4px}
+.page-head .meta{font-size:11px;color:var(--text-muted)}
+
+/* 4 Tab (D113) */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;gap:4px}
+.tab{padding:12px 18px;cursor:pointer;color:var(--text-dim);font-size:13px;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab .count{background:var(--surface-2);padding:1px 6px;border-radius:8px;font-size:10px;color:var(--text-muted)}
+
+.tab-content{padding:24px 32px;max-width:1080px;margin:0 auto}
+
+/* 基础 Tab */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:var(--text-dim)}
+.field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px;border-radius:7px;font-family:inherit;font-size:13px;outline:none}
+.field input:focus,.field textarea:focus{border-color:var(--primary)}
+.color-picker{display:flex;gap:6px}
+.color-dot{width:30px;height:30px;border-radius:7px;cursor:pointer;border:2px solid transparent}
+.color-dot.active{border-color:#fff}
+
+.prompt-edit{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column}
+.prompt-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:10px}
+.prompt-head .stat{margin-left:auto;font-size:11px}
+.prompt-edit textarea{background:transparent;border:none;color:var(--text);padding:14px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;resize:vertical;min-height:280px;outline:none}
+.prompt-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+
+/* 版本历史 (D114) */
+.history-fold{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;margin-top:14px}
+.history-head{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px}
+.history-list{padding:8px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.history-row{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;
+  display:flex;align-items:center;gap:12px;font-size:12px}
+.history-row .time{font-family:'JetBrains Mono',monospace;color:var(--text-muted);min-width:140px}
+.history-row .author{flex:1}
+.history-row .actions{display:flex;gap:5px}
+.history-row .actions button{background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit}
+.history-row.current{border-color:var(--success)}
+.history-row.current .time::after{content:" 当前";color:var(--success);font-family:inherit}
+
+/* Skills 绑定 Tab */
+.skill-bind{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.skill-col{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.skill-col h3{font-family:'Sora',sans-serif;font-size:13px;margin:0 0 10px;color:var(--text-dim)}
+.skill-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .12s}
+.skill-row:hover{background:var(--surface-2)}
+.skill-row .ico{width:18px}
+.skill-row .name{flex:1}
+.skill-row .cat{font-size:10px;color:var(--text-muted);background:var(--surface-3);padding:1px 6px;border-radius:3px}
+.skill-row.bound{background:var(--primary-dim);border-left:3px solid var(--primary);padding-left:7px}
+
+/* 测试沙盒 Tab */
+.sandbox-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:500px}
+.sandbox-col{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column}
+.sandbox-col h3{font-size:12px;color:var(--text-muted);margin:0;padding:10px 14px;border-bottom:1px solid var(--border)}
+.sandbox-col textarea{flex:1;background:transparent;border:none;color:var(--text-dim);padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;resize:none;outline:none}
+.sandbox-msgs{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.sandbox-msg{padding:8px 12px;border-radius:8px;font-size:12px;max-width:85%}
+.sandbox-msg.user{align-self:flex-end;background:var(--primary-dim);color:var(--primary)}
+.sandbox-msg.assistant{align-self:flex-start;background:var(--surface-2)}
+.sandbox-input{display:flex;gap:6px;padding:10px;border-top:1px solid var(--border)}
+.sandbox-input input{flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:5px;font-size:12px;outline:none}
+.sandbox-input button{background:var(--primary);color:#1a1a1a;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:600;font-size:12px}
+.sandbox-meta{padding:8px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+
+/* 经验/记忆/日志 Tab */
+.sub-tabs{display:flex;gap:4px;margin-bottom:14px}
+.sub-tab{padding:6px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;color:var(--text-dim)}
+.sub-tab.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+.exp-table{width:100%;border-collapse:collapse;font-size:12px}
+.exp-table th{text-align:left;padding:8px 10px;background:var(--surface-2);font-weight:500;font-size:11px;color:var(--text-muted)}
+.exp-table td{padding:8px 10px;border-top:1px solid var(--border)}
+.exp-tag{padding:2px 7px;border-radius:4px;font-size:10px}
+.exp-tag.draft{background:var(--warning-dim);color:var(--warning)}
+.exp-tag.approved{background:var(--success-dim);color:var(--success)}
+.exp-actions button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);padding:3px 7px;border-radius:4px;font-size:10px;cursor:pointer;margin-right:3px;font-family:inherit}
+.exp-actions .approve{background:var(--success);color:#fff;border-color:var(--success)}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <button class="back">←</button>
+  <div class="crumb">首页 / 管理后台 / Agents / <span class="current">编辑</span></div>
+  <div class="head-actions">
+    <button class="btn-save">💾 保存配置</button>
+  </div>
+</nav>
+
+<div class="page-head">
+  <div class="agent-icon">📈</div>
+  <div>
+    <h1>经营洞察 Agent</h1>
+    <div class="meta">系统预置 · 经营分析范式 · 已上架 · 156 对话</div>
+  </div>
+</div>
+
+<!-- 4 Tab (D113) -->
+<div class="tabs">
+  <div class="tab active">基础</div>
+  <div class="tab">Skills 绑定 <span class="count">4</span></div>
+  <div class="tab">🧪 测试对话</div>
+  <div class="tab">经验 / 记忆 / 日志 <span class="count">12</span></div>
+</div>
+
+<!-- 基础 Tab -->
+<div class="tab-content">
+  <div class="fields">
+    <div class="field"><label>名称</label><input value="经营洞察 Agent" /></div>
+    <div class="field">
+      <label>范式</label>
+      <select><option>经营分析 (biz_analysis)</option></select>
+    </div>
+    <div class="field" style="grid-column:span 2"><label>描述</label><input value="经营数据拆解归因与趋势洞察，帮助团队快速定位业务问题" /></div>
+    <div class="field"><label>Icon</label><input value="📈" /></div>
+    <div class="field">
+      <label>Color (v3 范式色)</label>
+      <div class="color-picker">
+        <div class="color-dot active" style="background:var(--p-biz)" title="biz 暖金"></div>
+        <div class="color-dot" style="background:var(--p-ab)" title="ab 雾蓝"></div>
+        <div class="color-dot" style="background:var(--p-data)" title="data 灰绿"></div>
+        <div class="color-dot" style="background:var(--p-wave);--p-wave:#c97b7b" title="wave 暗红"></div>
+        <div class="color-dot" style="background:var(--agent)" title="agent 紫"></div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:'Sora',sans-serif;font-size:14px;margin:24px 0 10px">System Prompt</h3>
+  <div class="prompt-edit">
+    <div class="prompt-head">
+      📝 system_prompt.md
+      <span class="stat">1,254 字符 · ~315 tokens</span>
+    </div>
+    <textarea>你是一名专业的经营分析 Agent，帮助产品团队从经营数据中发现关键洞察。
+
+核心原则：
+1. 数据查询必须先确认指标口径
+2. 渠道归因优先检查自然流量与推荐渠道的版本影响
+3. 季度报告必须包含同比和环比
+
+工作流程：
+- 需求澄清 → 指标确认 → SQL 生成 → 数据查询 → 多维拆解 → 归因分析 → 报告生成
+
+经验规则（自动注入，已批准 3 条）：
+1. 渠道归因应优先检查自然流量和推荐渠道的版本影响
+2. 季度报告需包含同比和环比两个维度的对比
+3. 归因分析完成后，需要对比历史同期数据验证结论可靠性
+...</textarea>
+    <div class="prompt-foot">
+      <span style="color:var(--success)">● 已保存 · 上次修改 5 分钟前</span>
+      <span>⚠ 修改 Prompt 将弹 ConfirmModal 提示影响 N 个进行中任务</span>
+    </div>
+  </div>
+
+  <!-- Prompt 版本历史 (D114) -->
+  <div class="history-fold">
+    <div class="history-head">
+      📜 版本历史 <span style="color:var(--text-muted);font-size:11px">8 个版本，可回滚</span>
+    </div>
+    <div class="history-list">
+      <div class="history-row current">
+        <span class="time">2026-05-07 10:23</span>
+        <span class="author">系统管理员 · "增加经验规则 #3"</span>
+        <div class="actions"><button>查看</button><button>对比</button></div>
+      </div>
+      <div class="history-row">
+        <span class="time">2026-05-04 14:12</span>
+        <span class="author">系统管理员 · "调整工作流程描述"</span>
+        <div class="actions"><button>查看</button><button>对比</button><button>↩ 回滚</button></div>
+      </div>
+      <div class="history-row">
+        <span class="time">2026-04-28 09:30</span>
+        <span class="author">系统管理员 · "注入经验卡片 #11"</span>
+        <div class="actions"><button>查看</button><button>对比</button><button>↩ 回滚</button></div>
+      </div>
+      <div class="history-row">
+        <span class="time">2026-04-20 16:00</span>
+        <span class="author">系统管理员 · "初版"</span>
+        <div class="actions"><button>查看</button><button>对比</button><button>↩ 回滚</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 隐藏其余 tab 演示，仅以提示展示 -->
+<div style="padding:24px 32px;max-width:1080px;margin:0 auto;color:var(--text-muted);font-size:12px;border-top:1px solid var(--border);margin-top:32px">
+  <strong>其余 Tab 演示</strong>（点击顶部 Tab 切换实际查看）：
+  <ul style="margin-top:8px">
+    <li><strong>Skills 绑定</strong>：双列多选 + 拖拽排序（4 已绑定）</li>
+    <li><strong>🧪 测试对话</strong>：左 Prompt 预览 + 右沙盒（POST /agents/{aid}/test-chat 不入库）</li>
+    <li><strong>经验/记忆/日志</strong>：3 sub-tab — 经验卡片审批 / Agent 记忆 / 进化时间线</li>
+  </ul>
+</div>
+</body>
+</html>

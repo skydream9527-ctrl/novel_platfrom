@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ICE Data Workbench — 完整功能与页面梳理</title>
+<style>
+  :root{
+    --bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+    --border:#3d3d3d;--border-light:#4d4d4d;
+    --text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+    --primary:#e8915a;--primary-hover:#f0a06e;--primary-dim:rgba(232,145,90,.12);
+    --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+    --p-ab:#7bafd4;--p-biz:#d4a34e;--p-gray:#9b8ec4;--p-data:#6baa8e;--p-wave:#c97b7b;
+    --success:#5bb98c;--warning:#d4a34e;--error:#c97b7b;--info:#7bafd4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:'DM Sans','Helvetica Neue','Microsoft YaHei',sans-serif;line-height:1.65}
+  a{color:var(--primary);text-decoration:none}
+  a:hover{color:var(--primary-hover)}
+
+  /* Top hero */
+  .hero{padding:64px 48px 40px;background:linear-gradient(135deg,#1a1a1a,#222 60%,#2a1f17);
+    border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-100px;right:-100px;width:400px;height:400px;
+    border-radius:50%;background:radial-gradient(circle,rgba(232,145,90,.10),transparent 70%)}
+  .hero h1{font-family:'Sora',sans-serif;font-size:42px;margin:0 0 8px;font-weight:700;
+    background:linear-gradient(135deg,var(--primary),var(--agent));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .hero .sub{color:var(--text-dim);font-size:17px;max-width:780px}
+  .hero .meta{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+  .badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim)}
+  .badge.primary{background:var(--primary-dim);color:var(--primary);border-color:rgba(232,145,90,.25)}
+  .badge.agent{background:var(--agent-dim);color:var(--agent);border-color:rgba(155,142,196,.25)}
+
+  /* TOC */
+  .toc{padding:24px 48px;background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+  .toc ol{margin:0;padding:0;list-style:none;display:flex;gap:8px;flex-wrap:wrap}
+  .toc li a{display:inline-block;padding:6px 12px;border-radius:6px;background:var(--surface-2);
+    border:1px solid var(--border);color:var(--text-dim);font-size:13px}
+  .toc li a:hover{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+
+  main{padding:32px 48px 80px;max-width:1280px;margin:0 auto}
+  section{margin:48px 0;scroll-margin-top:80px}
+  h2{font-family:'Sora',sans-serif;font-size:26px;margin:0 0 8px;
+    padding-bottom:10px;border-bottom:2px solid var(--border)}
+  h2 .num{color:var(--primary);font-weight:700;margin-right:8px}
+  h3{font-family:'Sora',sans-serif;font-size:18px;margin:28px 0 12px;color:var(--text)}
+  h3::before{content:"▸ ";color:var(--primary)}
+  p{margin:8px 0}
+  code,kbd{font-family:'JetBrains Mono',Consolas,monospace;font-size:13px;
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;color:var(--primary)}
+
+  /* Cards grid */
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:16px;transition:all .2s;position:relative;overflow:hidden}
+  .card:hover{transform:translateY(-2px);border-color:var(--primary);
+    box-shadow:0 6px 24px rgba(0,0,0,.4)}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--primary)}
+  .card.ab::before{background:var(--p-ab)}
+  .card.biz::before{background:var(--p-biz)}
+  .card.gray::before{background:var(--p-gray)}
+  .card.data::before{background:var(--p-data)}
+  .card.wave::before{background:var(--p-wave)}
+  .card.agent::before{background:var(--agent)}
+  .card.admin::before{background:var(--warning)}
+  .card.public::before{background:var(--success)}
+  .card .ico{font-size:22px;margin-bottom:6px}
+  .card .t{font-weight:600;color:var(--text);margin-bottom:4px;font-size:14px}
+  .card .p{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;
+    background:var(--surface-2);padding:2px 6px;border-radius:4px;display:inline-block;margin-bottom:8px}
+  .card .d{font-size:13px;color:var(--text-dim);line-height:1.55}
+  .card ul{margin:6px 0 0;padding-left:18px;color:var(--text-dim);font-size:12.5px}
+  .card ul li{margin:2px 0}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin:14px 0;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13.5px}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+  th{background:var(--surface-2);font-weight:600;color:var(--text);
+    font-family:'Sora',sans-serif;font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface-2)}
+  td code{font-size:12px}
+
+  /* Two columns */
+  .cols{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}.hero{padding:40px 20px}main{padding:20px}.toc{padding:14px 20px}}
+
+  /* Stat tiles */
+  .stats{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin:16px 0}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:18px;text-align:center}
+  .stat .n{font-family:'Sora',sans-serif;font-size:32px;font-weight:700;color:var(--primary)}
+  .stat .l{font-size:12px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+
+  /* Flow */
+  pre.flow{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--primary);
+    padding:16px;border-radius:8px;overflow-x:auto;font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;color:var(--text-dim);line-height:1.7}
+
+  /* Pills */
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .pill{padding:2px 8px;border-radius:4px;font-size:11px;background:var(--surface-2);
+    border:1px solid var(--border);color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+  .pill.p1{background:rgba(232,145,90,.10);color:var(--primary);border-color:rgba(232,145,90,.25)}
+  .pill.p2{background:rgba(212,163,78,.10);color:var(--warning);border-color:rgba(212,163,78,.25)}
+  .pill.p3{background:rgba(123,175,212,.10);color:var(--info);border-color:rgba(123,175,212,.25)}
+
+  /* Architecture diagram */
+  .arch{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;
+    font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.9;color:var(--text-dim)}
+  .arch .layer{padding:8px 14px;background:var(--surface-2);border:1px solid var(--border-light);
+    border-radius:8px;margin:8px 0}
+  .arch .layer.front{border-left:3px solid var(--p-ab)}
+  .arch .layer.back{border-left:3px solid var(--p-data)}
+  .arch .layer.agents{border-left:3px solid var(--agent)}
+  .arch .layer.data{border-left:3px solid var(--p-biz)}
+
+  /* Color swatches */
+  .swatches{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin:12px 0}
+  .swatch{padding:14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;
+    border:1px solid var(--border)}
+  .swatch .name{font-weight:600;font-size:13px;font-family:'Sora',sans-serif}
+  .swatch .hex{opacity:.85}
+
+  footer{padding:32px 48px;text-align:center;color:var(--text-muted);font-size:13px;
+    border-top:1px solid var(--border);background:var(--surface)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>ICE Data Workbench</h1>
+  <div class="sub">面向互联网产品团队的 <strong>数据工作流工作台</strong>，以 Web 应用形态运行，通过 Agent + 对话 + 工具调用驱动 AB 实验、经营分析、灰度监控、数据分析、波动归因等数据任务，并把团队知识、技能、模板沉淀为可复用资产。</div>
+  <div class="meta">
+    <span class="badge primary">PRD v3 · 2026-05-06</span>
+    <span class="badge">Frontend: React 19 + Vite</span>
+    <span class="badge">Backend: FastAPI + SQLAlchemy</span>
+    <span class="badge agent">5 个本地 Agent</span>
+    <span class="badge">25 个本地 Skill</span>
+    <span class="badge">23 个前端页面</span>
+    <span class="badge">100+ API 端点</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#arch">① 架构</a></li>
+    <li><a href="#paradigm">② 五大范式</a></li>
+    <li><a href="#pages">③ 前端页面</a></li>
+    <li><a href="#components">④ 组件</a></li>
+    <li><a href="#designs">⑤ 设计稿</a></li>
+    <li><a href="#api">⑥ 后端 API</a></li>
+    <li><a href="#models">⑦ 数据模型</a></li>
+    <li><a href="#llm">⑧ LLM</a></li>
+    <li><a href="#agents">⑨ 本地 Agent</a></li>
+    <li><a href="#skills">⑩ 本地 Skill</a></li>
+    <li><a href="#flow">⑪ Tool Calling</a></li>
+    <li><a href="#evolve">⑫ Agent 进化</a></li>
+    <li><a href="#design">⑬ 设计体系</a></li>
+    <li><a href="#priority">⑭ 优先级</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section>
+  <div class="stats">
+    <div class="stat"><div class="n">23</div><div class="l">前端页面</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">工作范式</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">内置 Agent</div></div>
+    <div class="stat"><div class="n">19+25</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">22</div><div class="l">数据表</div></div>
+    <div class="stat"><div class="n">13</div><div class="l">LLM 模型</div></div>
+  </div>
+</section>
+
+<section id="arch">
+  <h2><span class="num">①</span>整体架构</h2>
+  <div class="arch">
+<div class="layer front">前端 frontend/ &nbsp; React 19 · TypeScript · Vite · Zustand · React Router v7 · Axios · react-markdown · ECharts · CSS Modules</div>
+<div class="layer back">后端 server/ &nbsp; FastAPI · SQLAlchemy(asyncio) · aiosqlite · JWT · bcrypt · WebSocket · openai SSE</div>
+<div class="layer agents">本地 Agent agents/ &nbsp; data_analysis · know_agent · learn_agent · general_agent · shared(运行时)</div>
+<div class="layer">本地 Skill skills/ &nbsp; 25 个目录，启动时自动发现，解析 SKILL.md，可被 LLM function-calling</div>
+<div class="layer data">数据 users_data/ &nbsp; SQLite (ice_workbench.db) · uploads/ · exports/ · backups/</div>
+<div class="layer">公共 files/ &nbsp; 使用指南 · AB实验规范 · 指标口径字典 · 数据分析方法论</div>
+<div class="layer">规划 product_plan/ &nbsp; PRD v2/v3 · 13 份设计稿 HTML</div>
+  </div>
+  <p style="margin-top:14px;color:var(--text-dim)">部署：<code>frontend/dist</code> 由 server 静态托管 → 单端口部署。WebSocket 走 <code>/api/v1/ws/conversations/{cid}</code>。</p>
+</section>
+
+<section id="paradigm">
+  <h2><span class="num">②</span>五大工作范式 · Agent 1:1 绑定</h2>
+  <div class="grid">
+    <div class="card ab">
+      <div class="ico">⚖</div>
+      <div class="t">实验分析 Agent · ab_test</div>
+      <div class="d">AB 实验全流程分析（雾蓝 #7bafd4）</div>
+      <ul><li>分流查询</li><li>指标计算</li><li>显著性检验</li><li>报告生成</li></ul>
+    </div>
+    <div class="card biz">
+      <div class="ico">📈</div>
+      <div class="t">经营洞察 Agent · biz_analysis</div>
+      <div class="d">经营数据拆解归因（暖金 #d4a34e）</div>
+      <ul><li>指标拆解</li><li>趋势分析</li><li>归因分析</li><li>报告生成</li></ul>
+    </div>
+    <div class="card gray">
+      <div class="ico">🔌</div>
+      <div class="t">灰度监控 Agent · gray_release</div>
+      <div class="d">版本灰度质量监控（淡紫 #9b8ec4）</div>
+      <ul><li>灰度指标查询</li><li>版本对比</li><li>质量评估</li><li>放量建议</li></ul>
+    </div>
+    <div class="card data">
+      <div class="ico">📊</div>
+      <div class="t">数据分析 Agent · data_analysis</div>
+      <div class="d">自由数据查询与探索（灰绿 #6baa8e）</div>
+      <ul><li>SQL查询 / 数据清洗</li><li>可视化 / 建模</li><li>报告生成</li></ul>
+    </div>
+    <div class="card wave">
+      <div class="ico">🔥</div>
+      <div class="t">波动归因 Agent · wave_analysis</div>
+      <div class="d">指标波动归因定位（暗红 #c97b7b）</div>
+      <ul><li>异动检测</li><li>多维下钻</li><li>归因定位</li><li>影响评估</li></ul>
+    </div>
+    <div class="card agent">
+      <div class="ico">🤖</div>
+      <div class="t">通用 Agent · 开放任务</div>
+      <div class="d">不绑定范式，开放任务专用</div>
+      <ul><li>集成所有能力</li><li>用户可手动选择</li></ul>
+    </div>
+  </div>
+</section>
+
+<section id="pages">
+  <h2><span class="num">③</span>前端全部页面 · 23 个</h2>
+
+  <h3>公开页（无需登录） · 4</h3>
+  <div class="grid">
+    <div class="card"><div class="t">登录页</div><span class="p">/login</span><div class="d">账号密码 + 列表快捷登录，暗色动画背景，响应式</div></div>
+    <div class="card"><div class="t">注册页</div><span class="p">/register</span><div class="d">姓名/邮箱/密码，邮箱唯一校验</div></div>
+    <div class="card"><div class="t">使用指南</div><span class="p">/guide</span><div class="d">渲染 files/使用指南.md</div></div>
+    <div class="card"><div class="t">产品介绍</div><span class="p">/introduce</span><div class="d">营销页：核心价值与范式</div></div>
+  </div>
+
+  <h3>主用户页（AuthGuard） · 5</h3>
+  <div class="grid">
+    <div class="card public"><div class="t">Dashboard 首页</div><span class="p">/dashboard</span><div class="d">三区同屏：历史任务 + 创建任务 + 公共区。统计卡片(环比+sparkline)、公告横幅、在线知识库、公共任务、⌘K搜索、🔔通知</div></div>
+    <div class="card"><div class="t">创建任务页</div><span class="p">/create-task</span><div class="d">详尽表单：范式/Agent/模板/初始 Prompt/文件</div></div>
+    <div class="card primary"><div class="t">工作空间</div><span class="p">/workspace/:taskId</span><div class="d">三栏布局：Sidebar 280px + Chat + RightPanel 320px。WebSocket流式 / Tool Calling 卡片 / 引用文件&技能 / 内联ECharts / 推荐追问 / 沉淀经验</div></div>
+    <div class="card agent"><div class="t">Agent 详情</div><span class="p">/agent/:agentId</span><div class="d">概览 + 绑定 Skills + 经验卡片 + 进化时间线 + 使用统计</div></div>
+    <div class="card"><div class="t">定时任务</div><span class="p">/scheduled-tasks</span><div class="d">cron 频率 / 暂停恢复 / 执行记录 / 推送渠道(文件/飞书/邮件)</div></div>
+  </div>
+
+  <h3>管理后台（AdminGuard） · 14</h3>
+  <div class="grid">
+    <div class="card admin"><div class="t">概览 Dashboard</div><span class="p">/admin</span><div class="d">平台统计 + 最新审计 + 最新用户</div></div>
+    <div class="card admin"><div class="t">用户管理</div><span class="p">/admin/users</span><div class="d">CRUD + 角色 + 状态 + 重置密码</div></div>
+    <div class="card admin"><div class="t">Agent 管理</div><span class="p">/admin/agents</span><div class="d">列表 + 公共/私有 + 范式 + 审核</div></div>
+    <div class="card admin"><div class="t">Agent 编辑</div><span class="p">/admin/agents/:id/edit</span><div class="d">System Prompt 编辑器 + Skills 绑定 + 测试对话</div></div>
+    <div class="card admin"><div class="t">Skill 管理</div><span class="p">/admin/skills</span><div class="d">tool_schema JSON编辑器 + tool_entry + local/managed + 启用禁用</div></div>
+    <div class="card admin"><div class="t">经验卡片</div><span class="p">/admin/experience-cards</span><div class="d">按 Agent 分组审核 (draft→approved)</div></div>
+    <div class="card admin"><div class="t">用量统计</div><span class="p">/admin/usage</span><div class="d">每日趋势 + 按模型 + 按用户聚合</div></div>
+    <div class="card admin"><div class="t">知识库管理</div><span class="p">/admin/knowledge-bases</span><div class="d">飞书 space_id + Mify dataset_id + 同步频率 + 手动触发 + 同步日志</div></div>
+    <div class="card admin"><div class="t">公共文件</div><span class="p">/admin/files</span><div class="d">CRUD + 置顶 + 来源(feishu/mify_rag/local)</div></div>
+    <div class="card admin"><div class="t">任务模板</div><span class="p">/admin/templates</span><div class="d">审核 + 编辑 + 创建官方模板</div></div>
+    <div class="card admin"><div class="t">公共任务</div><span class="p">/admin/public-tasks</span><div class="d">用户"另存为公共任务"审核流</div></div>
+    <div class="card admin"><div class="t">LLM 成本</div><span class="p">/admin/costs</span><div class="d">按模型/用户/Agent 聚合 + 单价 + 趋势图</div></div>
+    <div class="card admin"><div class="t">SQL 审计</div><span class="p">/admin/sql-audit</span><div class="d">三级安全(allow/warn/block) + 按级别筛选</div></div>
+    <div class="card admin"><div class="t">系统配置</div><span class="p">/admin/settings</span><div class="d">模型管理 + 系统参数 + 公告 CRUD</div></div>
+  </div>
+</section>
+
+<section id="components">
+  <h2><span class="num">④</span>关键组件清单</h2>
+  <table>
+  <tr><th>组件</th><th>作用</th></tr>
+  <tr><td><code>AuthGuard / AdminGuard</code></td><td>路由守卫</td></tr>
+  <tr><td><code>NotificationCenter</code></td><td>🔔 通知中心 dropdown 380×480</td></tr>
+  <tr><td><code>SearchModal</code></td><td>⌘K 全局搜索 600×500（任务/Agent/Skill/文件/知识库）</td></tr>
+  <tr><td><code>AnnouncementBanner / WarningBanner</code></td><td>顶部公告 / slideDown 警告</td></tr>
+  <tr><td><code>ChatHeader / ChatMessages / ChatInput</code></td><td>对话三件套</td></tr>
+  <tr><td><code>ToolCallCard</code></td><td>工具调用过程卡片（执行中/完成/失败/超时）</td></tr>
+  <tr><td><code>InlineChart</code></td><td>ECharts 内联图表（chart_config）</td></tr>
+  <tr><td><code>SuggestedFollowups</code></td><td>推荐追问 chips</td></tr>
+  <tr><td><code>FilePreview</code></td><td>md / html sandbox / csv 表格预览</td></tr>
+  <tr><td><code>KnowledgeBrowser / KnowledgeBaseCard</code></td><td>知识库目录树 + Dashboard 知识库卡片</td></tr>
+  <tr><td><code>AgentConfigPanel / AgentDetailModal</code></td><td>Agent 配置/详情弹窗</td></tr>
+  <tr><td><code>ExperienceCardModal</code></td><td>经验卡片审核</td></tr>
+  <tr><td><code>ShareModal / WorkspaceSettings</code></td><td>协作者管理 / 工作空间设置</td></tr>
+  <tr><td><code>EmptyState / Skeleton / Sparkline / BgGrid</code></td><td>状态系列组件</td></tr>
+  <tr><td><code>useTheme / useWebSocket</code></td><td>亮暗双模 / WS 自动重连 3s</td></tr>
+  <tr><td><code>authStore / workspaceStore</code></td><td>Zustand 状态</td></tr>
+  </table>
+</section>
+
+<section id="designs">
+  <h2><span class="num">⑤</span>产品设计稿（product_plan/design/）· 13 份</h2>
+  <div class="grid">
+    <div class="card"><div class="t">dashboard_v2</div><div class="d">Dashboard 完整版</div></div>
+    <div class="card"><div class="t">login_v2</div><div class="d">登录页</div></div>
+    <div class="card"><div class="t">introduce_v2</div><div class="d">产品介绍</div></div>
+    <div class="card"><div class="t">workspace_v2</div><div class="d">工作空间三栏</div></div>
+    <div class="card"><div class="t">workspace_chat_v2</div><div class="d">对话 + Tool Calling 状态</div></div>
+    <div class="card"><div class="t">workspace_files_v2</div><div class="d">文件 + 知识库</div></div>
+    <div class="card"><div class="t">agent_detail_v2</div><div class="d">Agent 详情</div></div>
+    <div class="card"><div class="t">create_task_v2</div><div class="d">创建任务</div></div>
+    <div class="card"><div class="t">scheduled_task_v2</div><div class="d">定时任务</div></div>
+    <div class="card admin"><div class="t">admin_dashboard_v2</div><div class="d">管理后台总览</div></div>
+    <div class="card admin"><div class="t">admin_agents_v2</div><div class="d">Agent 管理</div></div>
+    <div class="card"><div class="t">states_demo</div><div class="d">空/加载/错误/流式状态</div></div>
+    <div class="card"><div class="t">notification_center_demo</div><div class="d">通知中心 + ⌘K 搜索</div></div>
+  </div>
+</section>
+
+<section id="api">
+  <h2><span class="num">⑥</span>后端 API · /api/v1</h2>
+
+  <h3>公共 / 认证</h3>
+  <table>
+  <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+  <tr><td>GET</td><td><code>/health</code></td><td>健康检查</td></tr>
+  <tr><td>GET</td><td><code>/guide</code></td><td>使用指南 markdown</td></tr>
+  <tr><td>GET</td><td><code>/announcements/active</code></td><td>公告列表（公开）</td></tr>
+  <tr><td>GET</td><td><code>/auth/accounts</code></td><td>账号列表（快捷登录）</td></tr>
+  <tr><td>POST</td><td><code>/auth/login</code></td><td>账号密码登录</td></tr>
+  <tr><td>POST</td><td><code>/auth/login-by-account</code></td><td>无密码快捷登录</td></tr>
+  <tr><td>POST</td><td><code>/auth/refresh</code></td><td>刷新 access_token</td></tr>
+  <tr><td>GET</td><td><code>/auth/me</code></td><td>当前用户</td></tr>
+  <tr><td>POST</td><td><code>/auth/register</code></td><td>注册</td></tr>
+  </table>
+
+  <h3>任务 /tasks · 工作空间 /workspaces</h3>
+  <div class="cols">
+  <table>
+  <tr><th>tasks</th><th>说明</th></tr>
+  <tr><td><code>GET /</code></td><td>我的任务列表</td></tr>
+  <tr><td><code>POST /</code></td><td>创建任务（同步建 workspace）</td></tr>
+  <tr><td><code>GET /shared/list</code></td><td>协作任务</td></tr>
+  <tr><td><code>GET /{tid}</code></td><td>任务详情</td></tr>
+  <tr><td><code>PATCH /{tid}</code></td><td>更新（重命名/归档）</td></tr>
+  <tr><td><code>DELETE /{tid}</code></td><td>删除</td></tr>
+  <tr><td><code>{tid}/collaborators</code></td><td>协作者增删查</td></tr>
+  <tr><td><code>{tid}/scheduled-tasks</code></td><td>定时任务 CRUD</td></tr>
+  <tr><td><code>{tid}/share · unshare</code></td><td>发布/撤回公共任务</td></tr>
+  </table>
+  <table>
+  <tr><th>workspaces</th><th>说明</th></tr>
+  <tr><td><code>GET /{wsid}</code></td><td>状态恢复</td></tr>
+  <tr><td><code>{wsid}/agents</code></td><td>列出/添加/创建私有/修改</td></tr>
+  <tr><td><code>{wsid}/agents/{aid}/config</code></td><td>System Prompt</td></tr>
+  <tr><td><code>{wsid}/skills</code></td><td>列出/添加</td></tr>
+  <tr><td><code>{wsid}/files</code></td><td>列出/新建</td></tr>
+  <tr><td><code>{wsid}/files/upload</code></td><td>上传 (csv/md/txt/html/json/sql, 2MB)</td></tr>
+  <tr><td><code>{wsid}/files/public</code></td><td>公共文件</td></tr>
+  <tr><td><code>{wsid}/knowledge-bases</code></td><td>列出/查询/同步/目录树</td></tr>
+  </table>
+  </div>
+
+  <h3>对话 / 文件 / 公共区</h3>
+  <table>
+  <tr><th>路径</th><th>说明</th></tr>
+  <tr><td><code>GET /conversations/{cid}/messages</code></td><td>消息历史(游标分页)</td></tr>
+  <tr><td><code>POST /conversations/messages/{mid}/feedback</code></td><td>消息反馈 👍/👎</td></tr>
+  <tr><td><code>POST /conversations/messages/{mid}/extract-experience</code></td><td>沉淀为经验卡片</td></tr>
+  <tr><td><code>GET/PUT/DELETE /files/{fid}</code></td><td>文件 CRUD</td></tr>
+  <tr><td><code>POST /files/{fid}/share</code></td><td>设置公共/私有</td></tr>
+  <tr><td><code>GET /commons</code></td><td>公共区混合列表 (?type=…)</td></tr>
+  <tr><td><code>GET /agents/public · POST /agents/{aid}/share</code></td><td>公共 Agent</td></tr>
+  <tr><td><code>POST /skills/{sid}/share</code></td><td>Skill 发布</td></tr>
+  <tr><td><code>GET /models</code></td><td>LLM 列表</td></tr>
+  <tr><td><code>GET /search</code></td><td>全局搜索</td></tr>
+  <tr><td><code>GET /stats</code></td><td>个人统计（环比+sparkline）</td></tr>
+  <tr><td><code>GET /local-agents · /local-skills</code></td><td>本地资源发现</td></tr>
+  </table>
+
+  <h3>WebSocket · /ws/conversations/{cid}</h3>
+  <pre class="flow">← user_message    {referenced_file_ids, referenced_skill_ids}
+→ user_message_ack
+→ agent_typing
+→ tool_call_start  {tool_name, arguments_summary}
+→ tool_call_done   {result_summary, chart_config?}
+→ agent_message    流式 chunk
+→ agent_message_done
+→ file_created
+→ suggested_followups</pre>
+
+  <h3>管理后台 /admin</h3>
+  <table>
+  <tr><th>资源</th><th>端点</th></tr>
+  <tr><td>统计</td><td><code>/admin/stats</code></td></tr>
+  <tr><td>用户</td><td><code>users · users/{uid}/reset-password</code></td></tr>
+  <tr><td>Agent</td><td><code>agents · agents/{aid}/review · agents/{aid}/skills</code></td></tr>
+  <tr><td>Skill</td><td><code>skills</code></td></tr>
+  <tr><td>范式预设</td><td><code>paradigm-presets</code></td></tr>
+  <tr><td>模型</td><td><code>models</code></td></tr>
+  <tr><td>系统配置</td><td><code>config</code></td></tr>
+  <tr><td>公告</td><td><code>announcements</code></td></tr>
+  <tr><td>审计</td><td><code>audit-logs · sql-audit</code></td></tr>
+  <tr><td>经验卡片</td><td><code>experience-cards · experience-cards/{cid}/review</code></td></tr>
+  <tr><td>用量</td><td><code>usage/summary · daily · by-model · by-user</code></td></tr>
+  <tr><td>知识库</td><td><code>knowledge-bases · knowledge-bases/{kbid}/sync</code></td></tr>
+  <tr><td>公共文件</td><td><code>files</code></td></tr>
+  <tr><td>模板</td><td><code>templates</code></td></tr>
+  </table>
+</section>
+
+<section id="models">
+  <h2><span class="num">⑦</span>数据模型 · 22 张表</h2>
+  <p>SQLite 存放于 <code>users_data/database/ice_workbench.db</code>，SQLAlchemy 2.0 异步 ORM。</p>
+  <table>
+  <tr><th>领域</th><th>表</th></tr>
+  <tr><td>用户/权限</td><td><code>User · AuditLog</code></td></tr>
+  <tr><td>任务</td><td><code>Task · Workspace · TaskCollaborator · TaskTemplate · ScheduledTask</code></td></tr>
+  <tr><td>Agent</td><td><code>Agent · AgentMemory · ExperienceCard · ParadigmPreset</code></td></tr>
+  <tr><td>Skill</td><td><code>Skill · associations(workspace_agents/workspace_skills/agent_skills)</code></td></tr>
+  <tr><td>文件/知识</td><td><code>File · KnowledgeBase · KBDocument</code></td></tr>
+  <tr><td>对话</td><td><code>Conversation · Message · MessageFeedback</code></td></tr>
+  <tr><td>LLM</td><td><code>LLMModel · LLMUsage</code></td></tr>
+  <tr><td>系统</td><td><code>SystemConfig · Announcement · SQLAuditLog</code></td></tr>
+  </table>
+  <p><strong>关键字段</strong>：<code>Agent.paradigm</code> UNIQUE 实现 1:1 绑定；<code>Skill.tool_schema</code> 为 OpenAI function-calling 格式 JSON；<code>File.sync_source</code> ∈ {feishu, mify_rag, null}；<code>Task.status</code> ∈ {active, archived}。</p>
+</section>
+
+<section id="llm">
+  <h2><span class="num">⑧</span>LLM 模型清单 · 13 个</h2>
+  <p>统一 OpenAI-compatible 端点 <code>http://model.mify.ai.srv/v1</code>，httpx SSE 流式。</p>
+  <table>
+  <tr><th>Provider</th><th>Model ID</th><th>显示名</th><th>Badge</th></tr>
+  <tr><td>OpenAI</td><td><code>azure_openai/gpt-5.4</code></td><td>GPT-5.4</td><td><span class="pill p1">推荐 default</span></td></tr>
+  <tr><td>OpenAI</td><td><code>azure_openai/gpt-5.4-pro</code></td><td>GPT-5.4 Pro</td><td><span class="pill p1">强力 pro</span></td></tr>
+  <tr><td>OpenAI</td><td><code>azure_openai/gpt-5.5</code></td><td>GPT-5.5</td><td><span class="pill p1">最新 pro</span></td></tr>
+  <tr><td>OpenAI</td><td><code>azure_openai/gpt-5.3-codex</code></td><td>GPT-5.3 Codex</td><td><span class="pill p2">代码</span></td></tr>
+  <tr><td>Anthropic</td><td><code>ppio/pa/claude-opus-4-6</code></td><td>Claude Opus 4.6</td><td><span class="pill p1">强力</span></td></tr>
+  <tr><td>Anthropic</td><td><code>ppio/pa/claude-opus-4-7</code></td><td>Claude Opus 4.7</td><td><span class="pill p1">最新</span></td></tr>
+  <tr><td>Anthropic</td><td><code>ppio/pa/claude-sonnet-4-6</code></td><td>Claude Sonnet 4.6</td><td>—</td></tr>
+  <tr><td>Google</td><td><code>vertex_ai/gemini-3.1-pro-preview</code></td><td>Gemini 3.1 Pro</td><td>—</td></tr>
+  <tr><td>Zhipu</td><td><code>xiaomi/glm-5</code></td><td>GLM-5</td><td>—</td></tr>
+  <tr><td>Xiaomi</td><td><code>xiaomi/mimo-v2.5-pro</code></td><td>MiMo v2.5 Pro</td><td>—</td></tr>
+  <tr><td>Moonshot</td><td><code>moonshot/kimi-k2.6</code></td><td>Kimi K2.6</td><td>—</td></tr>
+  <tr><td>Zhipu</td><td><code>zhipuai/glm-5.1</code></td><td>GLM 5.1</td><td>—</td></tr>
+  <tr><td>Tongyi</td><td><code>tongyi/qwen3.6-max-preview</code></td><td>Qwen 3.6 Max</td><td>—</td></tr>
+  </table>
+</section>
+
+<section id="agents">
+  <h2><span class="num">⑨</span>本地 Agent 系统 · agents/</h2>
+  <div class="grid">
+    <div class="card data">
+      <div class="ico">📊</div>
+      <div class="t">data_analysis · 数据分析 Agent</div>
+      <div class="d">业务线：浏览器主端/信息流/内容中心/搜索/小说<br>工作流：澄清→NL-SQL→Kyuubi 执行→多专家辩论→报告</div>
+      <ul>
+        <li>generate_sql_via_nlsql / save_sql</li>
+        <li>execute_query (Kyuubi) / save_csv</li>
+        <li>generate_chart / publish_to_feishu</li>
+        <li>anomaly_detect (2σ) / event_correlate</li>
+        <li>trend_forecast / period_compare</li>
+        <li>auto_drilldown 自动多维下钻</li>
+      </ul>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">experts/: SQL工程师 + 数据分析师 + 业务专家 + 反方，最多 3 轮辩论</div>
+    </div>
+    <div class="card agent">
+      <div class="ico">📚</div>
+      <div class="t">know_agent · 知识库 Agent</div>
+      <div class="d">飞书知识库「GYH AI学习」<br>Mify RAG（数据产品SQL · 知识库 beta）</div>
+      <ul>
+        <li>feishu_read / write / search</li>
+        <li>mify_search / upload</li>
+        <li>飞书 CLI OAuth 自动 token</li>
+      </ul>
+    </div>
+    <div class="card biz">
+      <div class="ico">🎓</div>
+      <div class="t">learn_agent · 学习 Agent</div>
+      <div class="d">ai-research-agent 子项目：inbox/knowledge/scripts/automation</div>
+      <ul>
+        <li>web_fetch / check_sources</li>
+        <li>generate_digest / import_links</li>
+        <li>extract / compare / discuss prompts</li>
+      </ul>
+    </div>
+    <div class="card public">
+      <div class="ico">🤖</div>
+      <div class="t">general_agent · 通用 Agent</div>
+      <div class="d">集成所有能力，开放任务专用</div>
+      <ul>
+        <li>query_data / generate_chart</li>
+        <li>search_knowledge / web_search / web_fetch</li>
+        <li>create_document / feishu_*</li>
+        <li>anomaly_detect / trend_forecast / period_compare</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ico">⚙</div>
+      <div class="t">shared/ · 共享运行时</div>
+      <div class="d">所有 Agent 共用基础设施</div>
+      <ul>
+        <li>runtime.py · AgentDefinition</li>
+        <li>llm_client.py · OpenAI SSE</li>
+        <li>tool_registry.py / skill_engine.py</li>
+        <li>prompt_builder.py · 三段式</li>
+        <li>memory.py / route_decider.py / trace.py</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="skills">
+  <h2><span class="num">⑩</span>本地 Skill · skills/ · 25 个</h2>
+  <p>启动扫描 + 解析 SKILL.md 自动注册，可被 LLM function-calling。</p>
+  <h3>文档/内容生成</h3>
+  <div class="pills">
+    <span class="pill">docx</span><span class="pill">pptx</span><span class="pill">xlsx</span><span class="pill">pdf</span><span class="pill">remotion</span>
+  </div>
+  <h3>知识/搜索</h3>
+  <div class="pills">
+    <span class="pill">notebooklm</span><span class="pill">enhanced-web-search</span><span class="pill">feishu</span><span class="pill">paper-2-web</span><span class="pill">knowledge-2-web</span>
+  </div>
+  <h3>数据/SQL</h3>
+  <div class="pills">
+    <span class="pill">kyuubi</span><span class="pill">nl-sql</span>
+  </div>
+  <h3>可视化</h3>
+  <div class="pills">
+    <span class="pill">imagen</span><span class="pill">manimgl-best-practices</span><span class="pill">article-illustration-generator</span>
+  </div>
+  <h3>UI/前端</h3>
+  <div class="pills">
+    <span class="pill">frontend-design</span><span class="pill">playwright</span><span class="pill">fad-executor-ui-figma</span><span class="pill">fad-verifier-qc</span>
+  </div>
+  <h3>工程/规划</h3>
+  <div class="pills">
+    <span class="pill">fad-brownfield-style</span><span class="pill">fad-plan-checker-gates</span><span class="pill">fad-planner-align</span><span class="pill">fad-doc-export-spreadsheet</span><span class="pill">planning-with-files</span><span class="pill">skill-creator</span>
+  </div>
+
+  <h3>公共文件 · files/ · 4 篇</h3>
+  <table>
+  <tr><th>文件</th><th>用途</th></tr>
+  <tr><td>使用指南.md</td><td>产品使用全流程指南（is_pinned 置顶）</td></tr>
+  <tr><td>AB实验规范文档.md</td><td>AB 实验设计原则与流程</td></tr>
+  <tr><td>指标口径字典.md</td><td>指标定义与计算口径</td></tr>
+  <tr><td>数据分析方法论.md</td><td>分析框架与方法</td></tr>
+  </table>
+</section>
+
+<section id="flow">
+  <h2><span class="num">⑪</span>Tool Calling 完整执行流程</h2>
+  <pre class="flow">用户消息 (含 referenced_file_ids / referenced_skill_ids)
+   ↓
+组装 LLM 请求
+  · System Prompt = Agent.config.system_prompt
+                   + "## 经验规则" + 已批准经验卡片 (最多 20 条)
+                   + "## 可用工具" + Skill 描述
+  · tools[] = agent_skills 绑定 + 用户引用 Skill 的 tool_schema
+  · 文件内容注入: CSV ≤100 行全量；>100 行 schema+前 20 行；MD/TXT 全量
+   ↓
+httpx SSE 调用 LLM
+   ↓
+├── 文本 chunk → ws agent_message
+└── tool_calls → 执行循环 (≤ 5 轮):
+      ↓ ws tool_call_start
+      ToolExecutor:
+        1. 查 tool_entry → 动态 import
+        2. SQL 类先过安全审计 (allow / warn / block)
+        3. 执行函数 (共享 ToolExecutionContext)
+           shared_data[kyuubi_sql_query / auto_drilldown / ...]
+        4. 单 Tool 30s 超时
+      ↓ ws tool_call_done (含 chart_config?)
+      result 回传 LLM → 继续生成
+      ├── 又 tool_calls → 继续 (≤5 轮)
+      └── 文本 → ws agent_message → done
+
+ToolExecutionContext 跨 Skill 共享上下文，跨对话隔离。</pre>
+</section>
+
+<section id="evolve">
+  <h2><span class="num">⑫</span>Agent 进化机制 · 经验卡片</h2>
+  <pre class="flow">用户对话 → Agent 回复
+   ↓
+异步分析对话质量:
+  · 用户确认有效的分析路径
+  · 高质量回答 (👍 标记)
+  · 反复被引用的结论
+   ↓
+提炼写入 AgentMemory
+   ↓
+记忆积累 / 多次验证 → 自动升级为 ExperienceCard(draft)
+   ↓
+管理员审批 → approved
+   ↓
+注入 Agent System Prompt 的 "经验规则" 章节 (最多 20 条)
+   ↓
+Agent 后续对话行为进化</pre>
+</section>
+
+<section id="design">
+  <h2><span class="num">⑬</span>设计体系 · v3</h2>
+  <h3>暖色专业感（Claude Code 风）</h3>
+  <div class="swatches">
+    <div class="swatch" style="background:#e8915a;color:#1a1a1a"><div class="name">Primary</div><div class="hex">#e8915a Warm Amber</div></div>
+    <div class="swatch" style="background:#9b8ec4;color:#1a1a1a"><div class="name">Agent</div><div class="hex">#9b8ec4 Purple</div></div>
+    <div class="swatch" style="background:#1a1a1a;color:#ede9e3;border-color:#3d3d3d"><div class="name">BG / Text</div><div class="hex">#1a1a1a / #ede9e3</div></div>
+    <div class="swatch" style="background:#7bafd4;color:#1a1a1a"><div class="name">AB 雾蓝</div><div class="hex">#7bafd4</div></div>
+    <div class="swatch" style="background:#d4a34e;color:#1a1a1a"><div class="name">Biz 暖金</div><div class="hex">#d4a34e</div></div>
+    <div class="swatch" style="background:#9b8ec4;color:#1a1a1a"><div class="name">Gray 淡紫</div><div class="hex">#9b8ec4</div></div>
+    <div class="swatch" style="background:#6baa8e;color:#1a1a1a"><div class="name">Data 灰绿</div><div class="hex">#6baa8e</div></div>
+    <div class="swatch" style="background:#c97b7b;color:#1a1a1a"><div class="name">Wave 暗红</div><div class="hex">#c97b7b</div></div>
+  </div>
+
+  <h3>布局尺寸 / 字体 / 动画</h3>
+  <table>
+  <tr><th>布局</th><th>尺寸</th></tr>
+  <tr><td>Global Bar</td><td>52px</td></tr>
+  <tr><td>Context Bar</td><td>44px</td></tr>
+  <tr><td>Sidebar (workspace)</td><td>280px</td></tr>
+  <tr><td>Sidebar (admin)</td><td>220px</td></tr>
+  <tr><td>RightPanel</td><td>320px</td></tr>
+  <tr><td>Notification dropdown</td><td>380×480</td></tr>
+  <tr><td>Search modal</td><td>600×500</td></tr>
+  </table>
+  <p>字体：<code>Sora</code>(标题) / <code>DM Sans</code>(正文) / <code>JetBrains Mono</code>(代码)。动画：<code>fadeUp / slideDown / shimmer / pulse / blink / bounce</code>。</p>
+  <p>背景三级：L3 展示型(introduce/login) 网格+orb；L2 导航型(dashboard) 单顶部 orb；L1 工具型(workspace/admin) 零装饰。</p>
+</section>
+
+<section id="priority">
+  <h2><span class="num">⑭</span>实施优先级</h2>
+  <div class="cols">
+    <div>
+      <h3>Phase 1 · P1 核心基础</h3>
+      <ul>
+        <li>三级角色 + 飞书 OAuth + Token 安全</li>
+        <li>首页三区同屏 + 使用指南置顶</li>
+        <li>Agent 1:1 范式绑定 + 经验卡片</li>
+        <li>Tool Calling 完整执行循环 + Skill 上下文共享</li>
+        <li>引用文件/技能 + 上传下载</li>
+        <li>飞书知识库每日同步 + 工作区目录</li>
+        <li>Agent 对话驱动进化（记忆 → 经验卡片）</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Phase 2 · P2 体验增强</h3>
+      <ul>
+        <li>内联 ECharts + 推荐追问 + 消息反馈</li>
+        <li>对话导出报告 + 向上加载历史</li>
+        <li>任务协作 + 模板 + 定时任务</li>
+        <li>管理后台 Agent / Skill / 文件 / 模板审核</li>
+        <li>用量统计 + LLM 成本追踪 + SQL 审计</li>
+        <li>RAG (Mify) 同步 + 公共文件管理</li>
+      </ul>
+      <h3>Phase 3 · P3 打磨优化</h3>
+      <ul>
+        <li>文件版本 / 重命名 / 搜索</li>
+        <li>Agent 进化日志 / Skill 测试运行</li>
+        <li>批量下载 / 图表导出</li>
+        <li>协作者在线 / 定时告警</li>
+        <li>成本 CSV 导出 / 敏感库保护</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+ICE Data Workbench · ice_data_workspace_v2 · 完整功能与页面梳理 · 同源伴生文件：<code>ICE_Workspace_完整功能与页面梳理.txt</code>
+</footer>
+
+</body>
+</html>

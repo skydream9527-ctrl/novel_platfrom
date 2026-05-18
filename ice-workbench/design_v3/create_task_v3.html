@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 创建任务工坊 (v3)</title>
+<!-- 对应决策：D71-D76 · 3 Step 工坊 + 模板预填 + 高级配置折叠 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-ab:#7bafd4;--p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --p-biz-dim:rgba(212,163,78,.12);--p-ab-dim:rgba(123,175,212,.12);
+  --p-data-dim:rgba(107,170,142,.12);--p-wave-dim:rgba(201,123,123,.12);
+  --p-gray-dim:rgba(155,142,196,.12);
+  --success:#5bb98c;--info:#7bafd4;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5}
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px}
+.back{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;border-radius:7px;cursor:pointer}
+.crumb{font-size:13px;color:var(--text-dim)}
+.crumb .current{color:var(--text)}
+
+.page{max-width:920px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:18px}
+
+.step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.step-title{font-family:'Sora',sans-serif;font-size:14px;color:var(--primary);margin:0 0 4px;font-weight:600}
+.step h2{font-family:'Sora',sans-serif;font-size:18px;margin:0 0 14px}
+
+/* Step 1 起点选择 */
+.step1-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.start-btn{padding:10px 16px;border-radius:8px;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--border);background:var(--surface-2);color:var(--text)}
+.start-btn:hover{border-color:var(--primary);color:var(--primary)}
+.start-btn.primary{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+.paradigm-select{position:relative}
+.paradigm-options{display:none;position:absolute;top:100%;left:0;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:6px;margin-top:4px;min-width:180px;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.paradigm-select.open .paradigm-options{display:block}
+.paradigm-option{padding:6px 10px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px}
+.paradigm-option:hover{background:var(--surface-2)}
+.current-selection{margin-top:12px;padding:10px 14px;background:var(--p-biz-dim);border:1px solid var(--p-biz);
+  border-radius:8px;display:flex;align-items:center;gap:10px;font-size:13px}
+.current-selection .label{color:var(--text-muted);font-size:11px}
+.current-selection .badge{background:var(--p-biz);color:#1a1a1a;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+
+/* Step 2 表单 */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.form-group input,.form-group textarea{width:100%;padding:10px 12px;background:var(--bg);
+  border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:13px;outline:none}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.form-group textarea{min-height:80px;resize:vertical;line-height:1.6}
+.form-group .hint{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* Step 3 折叠（默认收起 D73） */
+.fold{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.fold.prefilled{border-color:var(--primary);background:var(--primary-dim)}
+.fold-head{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.fold-head .chevron{transition:transform .2s;color:var(--text-muted)}
+.fold.open .fold-head .chevron{transform:rotate(90deg)}
+.fold-head .prefill-tag{margin-left:auto;font-size:10px;background:var(--primary);color:#1a1a1a;padding:2px 6px;border-radius:4px;font-weight:600;display:none}
+.fold.prefilled .fold-head .prefill-tag{display:inline-block}
+.fold-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.fold.open .fold-body{display:block;padding-top:14px}
+
+/* Skills 多选 */
+.skill-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.skill-chip{padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface)}
+.skill-chip.selected{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+
+/* 文件预上传 */
+.file-uploader{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;color:var(--text-dim);cursor:pointer;font-size:12px;margin-top:6px}
+.file-uploader:hover{border-color:var(--primary);background:var(--primary-dim)}
+.file-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.file-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px}
+.file-item button{margin-left:auto;background:transparent;border:none;color:var(--text-muted);cursor:pointer}
+
+/* Cron 输入 + 预设 */
+.cron-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.cron-preset{padding:4px 10px;background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;cursor:pointer;font-size:11px;color:var(--text-dim)}
+.cron-preset:hover{border-color:var(--primary);color:var(--primary)}
+.cron-row{display:flex;align-items:center;gap:10px}
+.cron-row input{flex:1;font-family:'JetBrains Mono',monospace}
+.cron-readable{font-size:12px;color:var(--success)}
+
+.push-channels{display:flex;gap:14px;margin-top:8px}
+.push-channels label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);font-weight:normal;margin:0;cursor:pointer}
+
+/* 协作者 */
+.collab-search{display:flex;gap:6px;margin-bottom:8px}
+.collab-search input{flex:1}
+.collab-list{display:flex;flex-direction:column;gap:4px}
+.collab-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;
+  display:flex;align-items:center;gap:8px;font-size:12px}
+.collab-item .ava{width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary),var(--agent));color:#fff;font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center}
+
+/* 底部 actions */
+.bottom-bar{display:flex;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid var(--border);
+  background:var(--surface);position:sticky;bottom:0}
+.bottom-bar label{font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;margin-right:auto}
+.bottom-bar .cancel{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:8px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}
+.bottom-bar .submit{background:var(--primary);color:#1a1a1a;border:none;
+  padding:8px 18px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <button class="back">←</button>
+  <div class="crumb">首页 / <span class="current">创建新任务</span></div>
+</nav>
+
+<div class="page">
+  <!-- Step 1 起点 -->
+  <section class="step">
+    <div class="step-title">STEP 1</div>
+    <h2>选择起点</h2>
+    <div class="step1-actions">
+      <button class="start-btn">📋 从模板创建</button>
+      <div class="paradigm-select" onclick="this.classList.toggle('open')">
+        <button class="start-btn primary">⚖ 范式：经营分析 ▾</button>
+        <div class="paradigm-options">
+          <div class="paradigm-option">⚖ AB 实验</div>
+          <div class="paradigm-option">📈 经营分析</div>
+          <div class="paradigm-option">🔌 版本灰度</div>
+          <div class="paradigm-option">📊 数据分析</div>
+          <div class="paradigm-option">🔥 波动分析</div>
+        </div>
+      </div>
+      <button class="start-btn">+ 开放任务</button>
+    </div>
+    <div class="current-selection">
+      <span class="label">当前选中</span>
+      <span class="badge">📈 经营分析</span>
+      <span>·</span>
+      <span>🤖 经营洞察 Agent</span>
+      <span style="margin-left:auto;color:var(--text-muted);font-size:11px">从 query 参数预填</span>
+    </div>
+  </section>
+
+  <!-- Step 2 任务基础 -->
+  <section class="step">
+    <div class="step-title">STEP 2</div>
+    <h2>任务基础</h2>
+    <div class="form-group">
+      <label>任务名称 *</label>
+      <input value="Q3 渠道归因分析" />
+    </div>
+    <div class="form-group">
+      <label>任务描述</label>
+      <textarea placeholder="简要说明任务目标..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>💬 初始 Prompt（可选）</label>
+      <textarea placeholder="例如：分析上周经营指标的关键变化与归因..."></textarea>
+      <div class="hint">按选中的范式自动适配 placeholder（D43）</div>
+    </div>
+  </section>
+
+  <!-- Step 3 高级配置（折叠 D73） -->
+  <section class="step">
+    <div class="step-title">STEP 3</div>
+    <h2>高级配置 <span style="font-size:12px;color:var(--text-muted);font-weight:normal">默认折叠，按需展开</span></h2>
+
+    <!-- Agent 与 Skills -->
+    <div class="fold prefilled">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chevron">▸</span>
+        <span>🤖 Agent 与 Skills</span>
+        <span class="prefill-tag">已从范式预填</span>
+      </div>
+      <div class="fold-body">
+        <div class="form-group">
+          <label>Agent</label>
+          <input value="📈 经营洞察 Agent (经营分析范式)" readonly />
+        </div>
+        <div class="form-group">
+          <label>Skills（可勾选删减）</label>
+          <div class="skill-chips">
+            <span class="skill-chip selected">✓ 指标拆解</span>
+            <span class="skill-chip selected">✓ 趋势分析</span>
+            <span class="skill-chip selected">✓ 归因分析</span>
+            <span class="skill-chip selected">✓ 报告生成</span>
+            <span class="skill-chip">+ 添加 Skill</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 预上传文件 -->
+    <div class="fold">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chevron">▸</span>
+        <span>📂 预上传文件（可选）</span>
+      </div>
+      <div class="fold-body">
+        <div class="file-uploader">📂 拖拽文件到此处或点击选择 · 支持 csv/md/txt/json/sql · 最大 20MB</div>
+      </div>
+    </div>
+
+    <!-- 定时执行 (D74) -->
+    <div class="fold open">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chevron">▸</span>
+        <span>⏱ 定时执行（可选）</span>
+      </div>
+      <div class="fold-body">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:14px">
+          <input type="checkbox" checked /> 设为定时任务
+        </label>
+        <div class="form-group">
+          <label>执行频率（cron 表达式）</label>
+          <div class="cron-presets">
+            <span class="cron-preset">每日 09:00</span>
+            <span class="cron-preset">每周一 09:30</span>
+            <span class="cron-preset">每月 1 日 09:00</span>
+            <span class="cron-preset">工作日 09:00</span>
+          </div>
+          <div class="cron-row">
+            <input value="0 9 * * *" />
+            <span class="cron-readable">→ 每日 09:00</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>执行 Prompt</label>
+          <textarea placeholder="默认继承 Step 2 初始 Prompt，可独立编辑..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>推送渠道</label>
+          <div class="push-channels">
+            <label><input type="checkbox" checked />💾 文件保存</label>
+            <label><input type="checkbox" checked />🪶 飞书通知</label>
+            <label><input type="checkbox" />📧 邮件</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 协作者 -->
+    <div class="fold">
+      <div class="fold-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chevron">▸</span>
+        <span>👥 协作者（可选）</span>
+      </div>
+      <div class="fold-body">
+        <div class="collab-search">
+          <input placeholder="🔍 搜索 邮箱 / 姓名 / 工号" />
+          <button class="start-btn">搜索</button>
+        </div>
+        <div class="collab-list">
+          <div class="collab-item">
+            <div class="ava">李</div>
+            <div style="flex:1">
+              <div>李思涵</div>
+              <div style="font-size:10px;color:var(--text-muted)">数据分析师 · 商业化</div>
+            </div>
+            <select style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px">
+              <option>collaborate</option><option>readonly</option>
+            </select>
+            <button style="background:transparent;border:none;color:var(--text-muted);cursor:pointer">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 底部 -->
+<div class="bottom-bar">
+  <label><input type="checkbox" checked /> 创建后立即开始对话 (D17)</label>
+  <button class="cancel">取消</button>
+  <button class="submit">创建任务 →</button>
+</div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# Secrets — never commit real keys to git.
+# Note: `make pack` DOES include .env in the zip for portable deploys.
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+backend/.venv/
+backend/build/
+backend/dist/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Runtime data (G3 file-first storage; populated at runtime)
+.cache/
+**/.cache/
+users/[a-f0-9]*/
+tasks/[a-f0-9]*/
+agents/**/prompt/cards.md
+*.lock
+*.lock~
+.tmp-*
+
+# Logs
+*.log
+/tmp/uvicorn*.log
+/tmp/uv-*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Large extracted reference (legacy v2 codebase, not part of v3 build)
+extracted/
+ice_data_workspace_v2.zip
+
+# Distributable bundles produced by `make pack`
+ice-workbench-*.zip

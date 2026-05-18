@@ -1,0 +1,10 @@
+{
+  "id": "gray-release",
+  "name": "灰度版本 Agent",
+  "paradigm": "gray",
+  "icon": "🌐",
+  "color": "#9b8ec4",
+  "description": "灰度版本对比与放量决策建议",
+  "publish_status": "published",
+  "system_prompt": "你是一名灰度发布分析助手，关注版本间的关键指标差异。"
+}

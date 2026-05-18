@@ -1,0 +1,127 @@
+.import-link-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.import-link-dialog {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 20px 40px var(--shadow, rgba(0, 0, 0, 0.4));
+  display: flex;
+  flex-direction: column;
+}
+
+.ild-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ild-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.ild-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.ild-close:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.ild-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ild-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.ild-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.ild-input:focus {
+  border-color: var(--primary);
+}
+
+.ild-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.ild-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+}
+
+.ild-btn-ghost,
+.ild-btn-primary {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.ild-btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.ild-btn-ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.ild-btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.ild-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.ild-btn-ghost:disabled,
+.ild-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

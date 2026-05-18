@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ICE Workbench · 登录 (v3)</title>
+<!-- 对应决策：D1-D6 · 飞书主推 + 极简左栏 + 测试快捷折叠 + ErrorState -->
+<style>
+:root[data-theme="dark"]{
+  --bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--border-light:#4d4d4d;
+  --text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-hover:#f0a06e;--primary-pressed:#d07a48;
+  --primary-dim:rgba(232,145,90,.12);--primary-glow:rgba(232,145,90,.25);
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-ab:#7bafd4;--p-biz:#d4a34e;--p-gray:#9b8ec4;--p-data:#6baa8e;--p-wave:#c97b7b;
+  --success:#5bb98c;--warning:#d4a34e;--error:#c97b7b;--info:#7bafd4;
+  --warning-dim:rgba(212,163,78,.12);--error-dim:rgba(201,123,123,.12);
+  --shadow:rgba(0,0,0,.4);
+}
+:root[data-theme="light"]{
+  --bg:#f8f6f3;--surface:#fff;--surface-2:#f2eeea;--surface-3:#e8e4df;
+  --border:#ddd8d2;--border-light:#ccc7c0;
+  --text:#1a1a1a;--text-dim:#6b6560;--text-muted:#9e9890;
+  --primary:#c27040;--primary-hover:#a85e35;--primary-pressed:#9a5530;
+  --primary-dim:rgba(194,112,64,.08);--primary-glow:rgba(194,112,64,.15);
+  --agent:#7b6fa8;--shadow:rgba(0,0,0,.06);
+  --warning-dim:rgba(160,125,48,.08);--error-dim:rgba(168,85,85,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'DM Sans','Helvetica Neue','Microsoft YaHei',sans-serif;line-height:1.5;
+  min-height:100vh;display:flex;align-items:stretch;overflow-x:hidden}
+
+/* L3 展示型背景 · 网格 + 2 orb */
+.bg-grid{position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.08;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.orb-1{top:-100px;left:-100px;width:500px;height:500px;
+  background:radial-gradient(circle,var(--primary) 0%,transparent 60%);opacity:.10;
+  animation:orbFloat 12s ease-in-out infinite}
+.orb-2{bottom:-100px;right:-100px;width:600px;height:600px;
+  background:radial-gradient(circle,var(--agent) 0%,transparent 60%);opacity:.08;
+  animation:orbFloat 16s ease-in-out infinite reverse}
+@keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(15px,-15px)}}
+
+/* Theme toggle (右上角悬浮) */
+.theme-toggle{position:fixed;top:20px;right:20px;z-index:10;
+  background:var(--surface);border:1px solid var(--border);
+  width:40px;height:40px;border-radius:8px;cursor:pointer;color:var(--text);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  transition:all .2s}
+.theme-toggle:hover{border-color:var(--primary)}
+
+/* 双栏布局 */
+.wrapper{display:grid;grid-template-columns:1fr 1fr;width:100%;min-height:100vh;
+  position:relative;z-index:1}
+@media(max-width:900px){.wrapper{grid-template-columns:1fr}.left{display:none}}
+
+/* 左栏 · 极简品牌区 */
+.left{padding:60px 60px;display:flex;flex-direction:column;justify-content:center;
+  gap:36px;border-right:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:10px;
+  background:linear-gradient(135deg,var(--primary),var(--agent));
+  display:flex;align-items:center;justify-content:center}
+.logo svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linejoin:round}
+.brand-title{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;margin:0}
+.brand-title .accent{background:linear-gradient(135deg,var(--primary),var(--agent));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-tagline{color:var(--text-dim);font-size:16px;margin-top:-8px}
+
+/* 三步循环动画 (D4 C 方案) */
+.demo-stage{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:24px;display:flex;flex-direction:column;gap:14px;min-height:280px;
+  position:relative;overflow:hidden}
+.demo-step{opacity:0;transform:translateY(8px);transition:all .5s ease;
+  display:flex;gap:10px;align-items:flex-start}
+.demo-step.active{opacity:1;transform:translateY(0)}
+.demo-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}
+.demo-avatar.user{background:linear-gradient(135deg,#c27040,var(--primary))}
+.demo-avatar.tool{background:var(--warning);color:#1a1a1a}
+.demo-avatar.agent{background:var(--agent)}
+.demo-bubble{flex:1;background:var(--surface-2);padding:10px 14px;border-radius:10px;
+  font-size:13px;line-height:1.55;border:1px solid var(--border)}
+.demo-bubble.tool-card{border-left:3px solid var(--success)}
+.demo-bubble.tool-card .tool-name{font-size:11px;color:var(--success);margin-bottom:4px;font-weight:600}
+.demo-bubble.report{border-left:3px solid var(--p-biz)}
+.demo-spark{display:flex;gap:2px;height:18px;align-items:flex-end;margin-top:6px}
+.demo-spark span{flex:1;background:var(--p-biz);border-radius:2px 2px 0 0;opacity:.7}
+
+/* 右栏 · 登录卡 */
+.right{padding:60px;display:flex;align-items:center;justify-content:center}
+.card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:36px 32px;box-shadow:0 8px 32px var(--shadow)}
+.card-title{font-family:'Sora',sans-serif;font-size:22px;font-weight:600;margin:0 0 6px}
+.card-subtitle{color:var(--text-dim);font-size:13px;margin:0 0 24px}
+
+/* ErrorState · v3 (D29) */
+.error-state{display:none;background:var(--warning-dim);border:1px solid var(--warning);
+  border-radius:8px;padding:12px 14px;margin-bottom:18px;align-items:flex-start;gap:10px}
+.error-state.show{display:flex;animation:slideDown .3s ease}
+.error-state .icon{font-size:18px;line-height:1}
+.error-state .msg{flex:1;font-size:13px;color:var(--text)}
+.error-state .code{display:block;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--text-muted);margin-top:4px}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* 飞书主按钮 (D1) */
+.btn-feishu{width:100%;padding:14px;border-radius:10px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#00d6b9,#00b89d);color:#fff;
+  font-family:inherit;font-size:15px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:20px;transition:all .2s;box-shadow:0 4px 16px rgba(0,184,157,.2)}
+.btn-feishu:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,184,157,.3)}
+
+/* 分隔线 */
+.divider{position:relative;text-align:center;margin:18px 0;color:var(--text-muted);font-size:12px}
+.divider::before,.divider::after{content:"";position:absolute;top:50%;width:35%;height:1px;background:var(--border)}
+.divider::before{left:0}.divider::after{right:0}
+
+/* 表单 */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);border-radius:8px;font-size:14px;
+  font-family:inherit;transition:border-color .2s}
+.form-group input:focus{outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-dim)}
+.label-row{display:flex;justify-content:space-between;align-items:baseline}
+.forgot-link{font-size:11px;color:var(--text-muted);text-decoration:none}
+.forgot-link:hover{color:var(--primary)}
+
+/* 次级登录按钮 */
+.btn-login{width:100%;padding:11px;border-radius:8px;cursor:pointer;
+  background:var(--primary);color:#1a1a1a;font-weight:600;border:none;
+  font-family:inherit;font-size:14px;margin-top:6px;transition:all .2s}
+.btn-login:hover{background:var(--primary-hover)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+
+/* 测试快捷登录折叠 (D3 + D6) */
+.test-section{margin-top:22px;padding-top:18px;border-top:1px dashed var(--border)}
+.test-toggle{display:flex;align-items:center;gap:6px;color:var(--text-muted);
+  cursor:pointer;font-size:12px;user-select:none;width:fit-content}
+.test-toggle:hover{color:var(--text-dim)}
+.test-toggle .chevron{transition:transform .2s;display:inline-block}
+.test-section.open .test-toggle .chevron{transform:rotate(90deg)}
+.test-accounts{display:none;gap:10px;margin-top:12px}
+.test-section.open .test-accounts{display:flex}
+.test-account{flex:1;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all .15s}
+.test-account:hover{border-color:var(--primary);background:var(--primary-dim)}
+.test-avatar{width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary),var(--agent));
+  color:#fff;font-weight:600;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+.test-name{font-size:13px;font-weight:600;color:var(--text)}
+.test-role{font-size:10px;color:var(--text-muted);margin-top:2px}
+.test-warning{font-size:10px;color:var(--text-muted);margin-top:10px;text-align:center;
+  font-style:italic}
+
+/* 底部 */
+.footer{margin-top:24px;padding-top:18px;border-top:1px solid var(--border);
+  text-align:center;font-size:12px;color:var(--text-muted)}
+.footer a{color:var(--text-dim);text-decoration:none}
+.footer a:hover{color:var(--primary)}
+
+/* 演示标记 */
+.demo-controls{position:fixed;bottom:20px;left:20px;background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;padding:8px 12px;
+  display:flex;gap:8px;font-size:11px;color:var(--text-dim);z-index:10}
+.demo-controls button{background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+
+<div class="wrapper">
+  <!-- 左栏 · 极简品牌区 (D4) -->
+  <section class="left">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <h1 class="brand-title"><span class="accent">ICE</span> Data Workbench</h1>
+    </div>
+    <p class="brand-tagline">AI 数据工作流工作台</p>
+
+    <!-- 三步循环动画 -->
+    <div class="demo-stage" id="demo">
+      <div class="demo-step" data-step="1">
+        <div class="demo-avatar user">我</div>
+        <div class="demo-bubble">分析一下上周新版本的留存指标变化</div>
+      </div>
+      <div class="demo-step" data-step="2">
+        <div class="demo-avatar tool">⚡</div>
+        <div class="demo-bubble tool-card">
+          <div class="tool-name">✓ SQL 查询 · 已完成</div>
+          query_data: 留存数据 7 天
+        </div>
+      </div>
+      <div class="demo-step" data-step="3">
+        <div class="demo-avatar agent">📈</div>
+        <div class="demo-bubble report">
+          <strong>分析报告 · v2.4 留存提升 8.5%</strong>
+          <div class="demo-spark">
+            <span style="height:30%"></span><span style="height:50%"></span>
+            <span style="height:65%"></span><span style="height:55%"></span>
+            <span style="height:75%"></span><span style="height:80%"></span>
+            <span style="height:95%;opacity:1"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右栏 · 登录卡 -->
+  <section class="right">
+    <div class="card">
+      <h2 class="card-title">欢迎回来</h2>
+      <p class="card-subtitle">选择登录方式进入工作台</p>
+
+      <!-- ErrorState 演示（默认隐藏） -->
+      <div class="error-state" id="error-state">
+        <span class="icon">🔒</span>
+        <div class="msg">
+          账号或密码错误
+          <span class="code">INVALID_CREDENTIALS</span>
+        </div>
+      </div>
+
+      <!-- 飞书主按钮 -->
+      <button class="btn-feishu" onclick="alert('飞书 OAuth 跳转中...\\n（演示稿，实际接入见 D89）')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 7.5c1.7-2.8 4.3-5 7.5-5.5-.5 1.5-.5 3.2 0 4.8C8.5 7.5 6 9.2 4.5 11.5L3.5 7.5z"/><path d="M11 6.8c.7 2 2 3.7 3.7 4.7l-5.2 8.5c-2-1.2-3.5-3-4.2-5.2L11 6.8z"/><path d="M14.7 11.5c2 1 4.3 1.2 6.3.5l-5.5 9c-2 .5-4.2.2-6-.8l5.2-8.7z"/></svg>
+        使用飞书账号登录
+      </button>
+
+      <div class="divider">或使用账号密码</div>
+
+      <div class="form-group">
+        <label>账号</label>
+        <input type="text" placeholder="输入邮箱" />
+      </div>
+      <div class="form-group">
+        <div class="label-row">
+          <label>密码</label>
+          <a class="forgot-link" href="#">忘记密码?</a>
+        </div>
+        <input type="password" placeholder="输入密码" />
+      </div>
+
+      <button class="btn-login" onclick="document.getElementById('error-state').classList.toggle('show')">
+        登录工作台
+      </button>
+
+      <!-- 测试快捷登录折叠 (D3) -->
+      <div class="test-section" id="test-section">
+        <div class="test-toggle" onclick="document.getElementById('test-section').classList.toggle('open')">
+          <span class="chevron">▸</span>
+          🔧 测试快捷登录
+        </div>
+        <div class="test-accounts">
+          <div class="test-account">
+            <div class="test-avatar">张</div>
+            <div class="test-name">张明远</div>
+            <div class="test-role">产品经理 · 增长</div>
+          </div>
+          <div class="test-account">
+            <div class="test-avatar" style="background:linear-gradient(135deg,var(--p-data),var(--p-biz))">李</div>
+            <div class="test-name">李思涵</div>
+            <div class="test-role">数据分析师 · 商业化</div>
+          </div>
+        </div>
+        <div class="test-warning">仅测试环境可见 · 生产环境自动隐藏</div>
+      </div>
+
+      <div class="footer">
+        没账号？<a href="#">联系 @gongyunhe 申请</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="demo-controls">
+  设计稿演示 · D1-D6
+  <button onclick="document.getElementById('error-state').classList.toggle('show')">切错误态</button>
+  <button onclick="document.getElementById('test-section').classList.toggle('open')">展开测试登录</button>
+</div>
+
+<script>
+function toggleTheme(){
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+// 三步循环动画
+let step = 0;
+function nextStep(){
+  document.querySelectorAll('.demo-step').forEach(el=>el.classList.remove('active'));
+  step = (step % 3) + 1;
+  setTimeout(()=>document.querySelector(`[data-step="${step}"]`).classList.add('active'), 100);
+}
+nextStep();
+setInterval(nextStep, 2200);
+</script>
+</body>
+</html>

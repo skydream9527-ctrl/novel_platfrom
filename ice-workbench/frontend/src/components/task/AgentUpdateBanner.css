@@ -1,0 +1,42 @@
+.agent-update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--warning-dim, rgba(212, 163, 78, 0.12));
+  border: 1px solid var(--warning, #d4a34e);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text);
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.aub-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.aub-text {
+  flex: 1;
+  color: var(--text);
+}
+
+.aub-btn {
+  padding: 6px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aub-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.aub-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

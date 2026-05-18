@@ -1,0 +1,833 @@
+# page_structure.yaml
+# yaml-language-server: $schema=
+# 版本：v2.0
+# 最后更新：2026-04-28
+# 最近更新：结构优化——统一cards模式、ref引用去重、page_flows修复、语义注释、空值省略
+#
+# elements 子字段语义定义：
+#   entries:        可交互入口元素（按钮、图标、Tab等用户可直接点击/触碰的UI入口）
+#   content_areas:  内容展示区域（文本、图片、视频等被动展示的内容容器）
+#   interactions:   用户操作行为（点击、滑动、输入等交互动作的描述）
+#   operations:     运营/广告/数据展示位（广告位、数据指标展示、运营弹窗等非内容性展示）
+#   边界规则：entries 与 operations 不可重复，按钮类入口仅归 entries，operations 仅放展示型运营位
+#
+# 共享页面引用机制：
+#   当页面使用 ref 字段时，表示该页面复用 shared_pages 中的同名模板
+#   产品内仅覆盖 traffic_level、traffic_dau、traffic_note 等差异字段
+#   解析时由 Skill 逻辑将 shared_pages 模板与产品差异字段合并
+
+traffic_level_definitions:
+  - level: "大流量"
+    dau_range: ">100万"
+    aa_fluctuation_threshold: "±0.5%"
+  - level: "中流量"
+    dau_range: "5万~100万"
+    aa_fluctuation_threshold: "±0.5%"
+  - level: "小流量"
+    dau_range: "<5万"
+    aa_fluctuation_threshold: "±1%"
+
+shared_pages:
+  "图文详情页":
+    description: "图文内容消费页"
+    cards:
+      - name: "顶部导航区"
+        elements:
+          entries:
+            - "顶部返回箭头"
+            - "分享图标"
+            - "菜单图标（三条杠）"
+          interactions:
+            - "点击返回"
+            - "点击分享"
+            - "点击菜单"
+      - name: "内容区"
+        elements:
+          content_areas:
+            - "标题区"
+            - "作者信息区"
+            - "正文内容区"
+            - "图片展示区"
+          interactions:
+            - "内容滚动"
+            - "图片查看"
+      - name: "广告区"
+        elements:
+          content_areas:
+            - "底部广告横幅"
+          operations:
+            - "底部广告横幅"
+
+  "沉浸式详情页":
+    description: "沉浸式内容消费页，包含视频流和广告流"
+    cards:
+      - name: "视频内容卡片"
+        elements:
+          entries:
+            - "顶部返回箭头"
+            - "菜单图标（三条杠/更多）"
+            - "领现金红包图标"
+            - "点赞图标"
+            - "评论图标"
+            - "分享图标"
+          content_areas:
+            - "视频播放区"
+            - "剧情标题区"
+            - "作者信息区"
+            - "来源信息区"
+            - "评论输入区"
+          interactions:
+            - "点击返回"
+            - "点击菜单"
+            - "领现金红包"
+            - "点赞操作"
+            - "评论操作"
+            - "分享操作"
+            - "视频播放控制"
+          operations:
+            - "领现金红包（进度条）"
+      - name: "广告转化卡片"
+        elements:
+          entries:
+            - "顶部返回箭头"
+            - "领现金红包图标"
+            - "点赞图标"
+            - "评论图标"
+            - "分享图标"
+            - "立即下载按钮"
+          content_areas:
+            - "视频播放区"
+            - "广告容器区"
+            - "剧情标题区"
+            - "作者信息区"
+            - "来源信息区"
+            - "评论输入区"
+          interactions:
+            - "点击返回"
+            - "领现金红包"
+            - "点赞操作"
+            - "评论操作"
+            - "分享操作"
+            - "点击立即下载"
+            - "视频播放控制"
+          operations:
+            - "领现金红包（进度条）"
+            - "广告容器"
+            - "立即下载按钮"
+      - name: "短剧内容卡片"
+        elements:
+          entries:
+            - "顶部返回箭头"
+            - "顶部Tab栏（推荐/短剧）"
+            - "点赞图标"
+            - "评论图标"
+            - "收藏图标"
+            - "分享图标"
+            - "短剧头像/封面"
+            - "短剧名称（带右箭头）"
+            - "标签（女生/奇幻爱情等）"
+            - "展开按钮"
+            - "看全集按钮"
+          content_areas:
+            - "视频播放区"
+            - "剧名/标题区"
+            - "备案信息区"
+            - "字幕/台词区"
+            - "简介文字区"
+            - "免费看全集提示区"
+          interactions:
+            - "点击返回"
+            - "Tab切换（推荐/短剧）"
+            - "点赞操作"
+            - "评论操作"
+            - "收藏操作"
+            - "分享操作"
+            - "点击短剧名称"
+            - "点击展开"
+            - "点击看全集"
+            - "视频播放控制"
+          operations:
+            - "点赞数展示（5852）"
+            - "评论数展示（18）"
+            - "评论输入框（\"说点什么...\"）"
+
+  "短剧详情页":
+    description: "短剧内容消费页"
+    cards:
+      - name: "播放控制区"
+        elements:
+          entries:
+            - "顶部返回箭头"
+            - "EX图标"
+            - "倍速按钮（1.0x）"
+            - "点赞图标"
+            - "评论图标"
+            - "分享图标"
+            - "收藏图标"
+            - "选集按钮"
+            - "全屏按钮"
+          content_areas:
+            - "视频播放区"
+            - "剧情标题区"
+            - "来源信息区"
+            - "选集列表区"
+          interactions:
+            - "点击返回"
+            - "点击倍速"
+            - "点赞操作"
+            - "评论操作"
+            - "分享操作"
+            - "收藏操作"
+            - "打开选集"
+            - "切换全屏"
+            - "视频播放控制"
+      - name: "广告区"
+        elements:
+          content_areas:
+            - "底部广告横幅"
+          operations:
+            - "底部广告横幅"
+
+  "任务详情页":
+    description: "积分激励体系的任务详情页面"
+    cards:
+      - name: "顶部导航区"
+        elements:
+          entries:
+            - "返回按钮"
+            - "规则按钮"
+          interactions:
+            - "点击返回"
+            - "点击规则"
+      - name: "资产展示区"
+        elements:
+          entries:
+            - "去提现按钮"
+          content_areas:
+            - "金币收益展示"
+            - "现金收益展示"
+          interactions:
+            - "点击去提现"
+      - name: "金币兑换区"
+        elements:
+          content_areas:
+            - "金币兑换码区域"
+      - name: "大额专享卡片"
+        elements:
+          entries:
+            - "下载/浏览按钮"
+          content_areas:
+            - "大额专享任务列表"
+          interactions:
+            - "点击下载/去浏览"
+      - name: "日常任务卡片"
+        elements:
+          entries:
+            - "去看看按钮"
+          content_areas:
+            - "日常任务列表（明日签到、看小视频等）"
+          interactions:
+            - "点击去看看"
+      - name: "连续打卡卡片"
+        elements:
+          entries:
+            - "去打卡按钮"
+          content_areas:
+            - "连续打卡进度"
+          interactions:
+            - "点击去打卡"
+      - name: "其他任务卡片"
+        elements:
+          entries:
+            - "去体验/下载/领取按钮"
+          content_areas:
+            - "其他任务列表（访问千问、下载58同城等）"
+          interactions:
+            - "点击去体验/下载/领取"
+      - name: "底部红包区"
+        elements:
+          entries:
+            - "点击领取金币按钮"
+          content_areas:
+            - "点击领取金币区域"
+          interactions:
+            - "点击领取"
+
+page_flows:
+  "小米浏览器":
+    - from: "首页"
+      to: "搜索首页"
+      trigger: "置顶区.搜索框"
+      type: click
+    - from: "首页"
+      to: "图文详情页"
+      trigger: "信息流推荐卡片.信息流推荐流"
+      type: click
+    - from: "首页"
+      to: "沉浸式详情页"
+      trigger: "信息流推荐卡片.信息流推荐流"
+      type: click
+    - from: "首页"
+      to: "短剧详情页"
+      trigger: "置顶区.顶部Tab栏"
+      type: tab_switch
+    - from: "首页"
+      to: "短剧详情页"
+      trigger: "信息流推荐卡片.信息流推荐流"
+      type: click
+    - from: "沉浸式详情页"
+      to: "短剧详情页"
+      trigger: "短剧内容卡片.短剧名称"
+      type: click
+    - from: "首页"
+      to: "我的页"
+      trigger: "底部导航栏.底部Tab栏"
+      type: tab_switch
+    - from: "搜索首页"
+      to: "搜索SUG页"
+      trigger: "搜索栏.搜索框"
+      type: input
+    - from: "搜索首页"
+      to: "搜索结果页"
+      trigger: "搜索栏.搜索按钮"
+      type: click
+    - from: "搜索SUG页"
+      to: "搜索结果页"
+      trigger: "搜索建议区.搜索按钮"
+      type: click
+    - from: "搜索SUG页"
+      to: "搜索结果页"
+      trigger: "搜索建议区.搜索建议词条"
+      type: click
+    - from: "图文详情页"
+      to: "首页"
+      trigger: "顶部导航区.顶部返回箭头"
+      type: back
+    - from: "沉浸式详情页"
+      to: "首页"
+      trigger: "视频内容卡片.顶部返回箭头"
+      type: back
+    - from: "短剧详情页"
+      to: "首页"
+      trigger: "播放控制区.顶部返回箭头"
+      type: back
+    - from: "搜索结果页"
+      to: "搜索首页"
+      trigger: "顶部功能区.顶部返回箭头"
+      type: back
+    - from: "我的页"
+      to: "任务详情页"
+      trigger: "资产激励区.去赚钱按钮"
+      type: click
+    - from: "我的页"
+      to: "短剧详情页"
+      trigger: "短剧收藏区.短剧收藏内容"
+      type: click
+    - from: "任务详情页"
+      to: "我的页"
+      trigger: "顶部导航区.返回按钮"
+      type: back
+  "内容中心":
+    - from: "首页/推荐页"
+      to: "图文详情页"
+      trigger: "信息流卡片.视频内容展示"
+      type: click
+    - from: "首页/推荐页"
+      to: "沉浸式详情页"
+      trigger: "信息流卡片.视频内容展示"
+      type: click
+    - from: "首页/推荐页"
+      to: "短剧详情页"
+      trigger: "顶部Tab栏.短剧Tab"
+      type: tab_switch
+    - from: "首页/推荐页"
+      to: "短剧详情页"
+      trigger: "信息流卡片.视频内容展示"
+      type: click
+    - from: "首页/推荐页"
+      to: "个人中心页"
+      trigger: "底部导航栏.我的Tab"
+      type: tab_switch
+    - from: "首页/推荐页"
+      to: "任务详情页"
+      trigger: "底部导航栏.赚钱Tab"
+      type: tab_switch
+    - from: "首页/推荐页"
+      to: "搜索首页（浏览器）"
+      trigger: "顶部搜索区.搜索框"
+      type: click
+      note: "内容中心搜索由外部浏览器承载，跳转至浏览器搜索首页"
+    - from: "个人中心页"
+      to: "任务详情页"
+      trigger: "天天赚钱区.去赚钱按钮"
+      type: click
+    - from: "图文详情页"
+      to: "首页/推荐页"
+      trigger: "顶部导航区.顶部返回箭头"
+      type: back
+    - from: "沉浸式详情页"
+      to: "首页/推荐页"
+      trigger: "视频内容卡片.顶部返回箭头"
+      type: back
+    - from: "沉浸式详情页"
+      to: "短剧详情页"
+      trigger: "短剧内容卡片.短剧名称"
+      type: click
+    - from: "短剧详情页"
+      to: "首页/推荐页"
+      trigger: "播放控制区.顶部返回箭头"
+      type: back
+    - from: "任务详情页"
+      to: "个人中心页"
+      trigger: "顶部导航区.返回按钮"
+      type: back
+      condition: "from_个人中心页"
+    - from: "任务详情页"
+      to: "首页/推荐页"
+      trigger: "顶部导航区.返回按钮"
+      type: back
+      condition: "from_首页推荐页"
+
+products:
+  - name: "小米浏览器"
+    alias: ["浏览器", "Browser"]
+    pages:
+      - name: "首页"
+        description: "浏览器主界面，包含搜索、导航、信息流、功能入口等"
+        traffic_level: "大流量"
+        traffic_dau: 30000000
+        traffic_note: "全量用户入口"
+        cards:
+          - name: "置顶区"
+            elements:
+              entries:
+                - "搜索框"
+                - "顶部Tab栏（热点/推荐/7×24/视频/短剧/小说/小视）"
+              interactions:
+                - "搜索交互"
+                - "Tab切换"
+          - name: "快讯卡片"
+            elements:
+              content_areas:
+                - "快讯卡片区"
+              operations:
+                - "快讯标识"
+          - name: "信息流推荐卡片"
+            elements:
+              content_areas:
+                - "信息流推荐流"
+              interactions:
+                - "信息流滚动"
+                - "卡片关闭（×按钮）"
+          - name: "广告卡片"
+            elements:
+              content_areas:
+                - "广告卡片区"
+              operations:
+                - "广告卡片"
+          - name: "底部导航栏"
+            elements:
+              entries:
+                - "底部Tab栏（首页/窗口/Ai/免费小说/我的）"
+              interactions:
+                - "底部导航切换"
+
+      - name: "搜索首页"
+        description: "搜索初始页，从首页搜索框点击进入"
+        traffic_level: "大流量"
+        traffic_dau: 9000000
+        traffic_note: "高频搜索入口"
+        cards:
+          - name: "搜索栏"
+            elements:
+              entries:
+                - "搜索框（带 paw 图标）"
+                - "相机图标"
+                - "搜索按钮"
+              interactions:
+                - "搜索输入"
+          - name: "搜索历史卡片"
+            elements:
+              entries:
+                - "搜索历史清空按钮"
+              content_areas:
+                - "搜索历史区"
+              interactions:
+                - "点击搜索历史"
+          - name: "猜你想搜卡片"
+            elements:
+              entries:
+                - "猜你想搜刷新按钮"
+                - "猜你想搜眼睛图标"
+              content_areas:
+                - "猜你想搜区"
+              interactions:
+                - "点击猜你想搜词"
+          - name: "热搜榜卡片"
+            elements:
+              content_areas:
+                - "热搜榜区"
+              interactions:
+                - "点击热搜榜"
+                - "切换榜单"
+              operations:
+                - "热搜榜热标（🔥/热/新）"
+                - "热搜榜排名颜色（红/橙/黄）"
+          - name: "小说榜卡片"
+            elements:
+              content_areas:
+                - "小说榜区"
+
+      - name: "搜索SUG页"
+        description: "搜索建议页，输入关键词过程中显示的下拉建议"
+        traffic_level: "大流量"
+        traffic_dau: 8000000
+        traffic_note: "搜索必经路径"
+        cards:
+          - name: "搜索栏"
+            elements:
+              entries:
+                - "搜索框"
+                - "清除按钮（×）"
+                - "搜索按钮"
+              interactions:
+                - "输入关键词"
+                - "点击清除按钮"
+                - "点击搜索按钮"
+          - name: "搜索建议区"
+            elements:
+              entries:
+                - "搜索建议词条（带放大镜图标）"
+                - "建议词条右箭头"
+              content_areas:
+                - "搜索建议列表区"
+              interactions:
+                - "点击搜索建议"
+          - name: "广告卡片"
+            elements:
+              entries:
+                - "广告卡片安装按钮"
+              content_areas:
+                - "广告卡片区"
+              operations:
+                - "广告卡片（带\"广告\"标识）"
+                - "标签（实用工具/图书阅读）"
+
+      - name: "搜索结果页"
+        description: "搜索结果展示页，只关注顶部功能区和底部导航区"
+        traffic_level: "大流量"
+        traffic_dau: 7000000
+        traffic_note: "搜索必经路径"
+        cards:
+          - name: "顶部功能区"
+            elements:
+              entries:
+                - "顶部搜索框"
+                - "顶部Tab栏（全网/百度/抖音）"
+                - "搜索按钮"
+                - "百度一下按钮"
+                - "分栏Tab（文心/综合/笔记/视频/图片/筛选）"
+              interactions:
+                - "搜索输入"
+                - "切换搜索源Tab"
+                - "点击搜索"
+                - "切换分栏Tab"
+                - "筛选操作"
+          - name: "底部导航区"
+            elements:
+              entries:
+                - "底部Tab栏（左箭头/窗口/Ai/菜单/右箭头）"
+              interactions:
+                - "底部导航切换"
+
+      - name: "图文详情页"
+        ref: "图文详情页"
+        traffic_level: "大流量"
+        traffic_dau: 4000000
+        traffic_note: "内容消费核心页"
+
+      - name: "沉浸式详情页"
+        ref: "沉浸式详情页"
+        traffic_level: "大流量"
+        traffic_dau: 4000000
+        traffic_note: "视频消费核心页"
+
+      - name: "短剧详情页"
+        ref: "短剧详情页"
+        traffic_level: "小流量"
+        traffic_dau: 100000
+        traffic_note: "短剧垂类消费页"
+
+      - name: "我的页"
+        description: "用户资产与个人中心页面"
+        traffic_level: "大流量"
+        traffic_dau: 2000000
+        traffic_note: "用户个人中心"
+        cards:
+          - name: "用户信息区"
+            elements:
+              entries:
+                - "头像/个人信息"
+                - "消息图标"
+                - "设置图标"
+              interactions:
+                - "点击头像/个人信息"
+                - "点击消息"
+                - "点击设置"
+          - name: "资产激励区"
+            elements:
+              entries:
+                - "去提现按钮"
+                - "去赚钱按钮"
+              content_areas:
+                - "金币/现金余额区"
+              interactions:
+                - "点击去提现"
+                - "点击去赚钱"
+          - name: "快捷功能区"
+            elements:
+              entries:
+                - "书签图标"
+                - "历史图标"
+                - "我的下载图标"
+                - "我的视频图标"
+                - "我的关注图标"
+                - "我的网盘图标"
+                - "小说书架图标"
+              interactions:
+                - "点击快捷功能"
+          - name: "工具区"
+            elements:
+              entries:
+                - "夜间模式图标"
+                - "无痕模式图标"
+                - "访问电脑版图标"
+          - name: "精选服务区"
+            elements:
+              entries:
+                - "AI搜索图标"
+                - "百度图标"
+                - "小说图标"
+                - "综合搜索图标"
+                - "AI空间图标"
+                - "更多按钮（各板块）"
+              content_areas:
+                - "精选服务区"
+              interactions:
+                - "点击精选服务"
+              operations:
+                - "精选服务广告位"
+          - name: "我的文件区"
+            elements:
+              content_areas:
+                - "我的文件区"
+              interactions:
+                - "点击我的文件"
+          - name: "小说区"
+            elements:
+              content_areas:
+                - "全网免费热门小说区"
+              interactions:
+                - "点击小说"
+          - name: "短剧收藏区"
+            elements:
+              content_areas:
+                - "短剧收藏区"
+              interactions:
+                - "点击短剧收藏"
+          - name: "游戏区"
+            elements:
+              content_areas:
+                - "游戏区"
+              interactions:
+                - "点击游戏"
+              operations:
+                - "游戏推荐位"
+          - name: "底部导航栏"
+            elements:
+              entries:
+                - "底部Tab栏"
+              interactions:
+                - "底部导航切换"
+
+      - name: "任务详情页"
+        ref: "任务详情页"
+        traffic_level: "小流量"
+        traffic_dau: 100000
+        traffic_note: "激励用户专属页面"
+
+  - name: "内容中心"
+    alias: ["NH", "NewHome", "内容中心"]
+    search_note: "内容中心搜索由外部浏览器承载，点击搜索框跳转至浏览器搜索首页"
+    pages:
+      - name: "首页/推荐页"
+        description: "信息流主界面，推荐内容展示"
+        traffic_level: "大流量"
+        traffic_dau: 30000000
+        traffic_note: "全量用户入口"
+        cards:
+          - name: "顶部搜索区"
+            elements:
+              entries:
+                - "搜索框"
+                - "相机图标"
+                - "Ai图标"
+                - "搜索按钮"
+              interactions:
+                - "搜索输入"
+                - "点击Ai"
+                - "点击搜索"
+          - name: "顶部Tab栏"
+            elements:
+              entries:
+                - "短剧Tab"
+                - "推荐Tab"
+                - "视频Tab"
+                - "小视频Tab"
+                - "7×24Tab"
+                - "体育Tab"
+                - "财经Tab"
+              interactions:
+                - "Tab切换"
+          - name: "信息流卡片"
+            elements:
+              content_areas:
+                - "视频内容展示"
+                - "作者/时间信息"
+              interactions:
+                - "点击播放"
+                - "上滑/下滑切换视频"
+          - name: "广告卡片"
+            elements:
+              content_areas:
+                - "广告内容展示"
+              operations:
+                - "广告标识"
+                - "立即打开按钮"
+          - name: "底部导航栏"
+            elements:
+              entries:
+                - "首页Tab"
+                - "刷视频Tab"
+                - "赚钱Tab"
+                - "热榜Tab"
+                - "我的Tab"
+              interactions:
+                - "Tab切换"
+
+      - name: "图文详情页"
+        ref: "图文详情页"
+        traffic_level: "大流量"
+        traffic_dau: 2000000
+        traffic_note: "内容消费核心页"
+
+      - name: "沉浸式详情页"
+        ref: "沉浸式详情页"
+        traffic_level: "大流量"
+        traffic_dau: 5000000
+        traffic_note: "视频消费核心页"
+
+      - name: "短剧详情页"
+        ref: "短剧详情页"
+        traffic_level: "小流量"
+        traffic_dau: 100000
+        traffic_note: "短剧垂类消费页"
+
+      - name: "个人中心页"
+        description: "用户个人主页"
+        traffic_level: "中流量"
+        traffic_dau: 500000
+        traffic_note: "用户个人中心"
+        cards:
+          - name: "用户信息区"
+            elements:
+              entries:
+                - "用户头像"
+                - "设置按钮"
+              content_areas:
+                - "用户昵称"
+                - "用户ID"
+              interactions:
+                - "点击头像"
+                - "点击设置"
+          - name: "快捷功能区"
+            elements:
+              entries:
+                - "我的关注"
+                - "我的收藏"
+                - "我的点赞"
+                - "浏览历史"
+              interactions:
+                - "点击快捷功能"
+          - name: "天天赚钱区"
+            elements:
+              entries:
+                - "去提现按钮"
+                - "去赚钱按钮"
+                - "每日签到"
+                - "看视频赚钱"
+                - "开宝箱"
+              content_areas:
+                - "现金余额展示"
+                - "金币余额展示"
+              interactions:
+                - "点击去提现"
+                - "点击去赚钱"
+                - "点击任务入口"
+          - name: "内容展示区"
+            elements:
+              entries:
+                - "编辑按钮"
+              content_areas:
+                - "收藏短剧"
+                - "观看历史"
+                - "猜你喜欢"
+              interactions:
+                - "点击内容卡片"
+                - "点击编辑"
+          - name: "底部导航栏"
+            elements:
+              entries:
+                - "首页Tab"
+                - "刷视频Tab"
+                - "赚钱Tab"
+                - "热榜Tab"
+                - "我的Tab"
+              interactions:
+                - "Tab切换"
+
+      - name: "任务详情页"
+        ref: "任务详情页"
+        traffic_level: "中流量"
+        traffic_dau: 600000
+        traffic_note: "激励用户专属页面"
+
+changelog:
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "v2.0结构优化：①统一cards→elements二级模式 ②ref引用消除跨产品重复 ③page_flows补全卡片前缀/condition/搜索结果页返回 ④elements子字段语义注释+entries与operations去重 ⑤内容中心搜索链路标注 ⑥空数组省略"
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "沉浸式详情页短剧Card元素补充完整（基于截图分析：顶部Tab栏、视频播放区、右侧交互区、底部短剧信息区）"
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "补充页面导航关系（page_flows）+沉浸式详情页新增短剧Card+内容中心任务详情页返回首页"
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "补充页面导航关系（page_flows），基于页面和卡片命名推导导航路径"
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "补充页面量级档位（traffic_level/traffic_dau/traffic_note），新增 traffic_level_definitions 量级定义"
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "完成小米浏览器和内容中心的页面结构骨架搭建，复用机制优化"
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: "初始创建，页面结构待用户补充真实业务数据"

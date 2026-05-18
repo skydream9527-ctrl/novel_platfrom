@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 使用指南 (v3)</title>
+<!-- 对应决策：D90-D95 · 双栏 TOC + 搜索 + 反馈打印 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-hover:#f0a06e;--primary-dim:rgba(232,145,90,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.7}
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.back{background:var(--surface-2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:7px;cursor:pointer}
+.crumb{font-size:13px;color:var(--text-dim)}.crumb .current{color:var(--text)}
+.right-actions{margin-left:auto;display:flex;gap:6px}
+.icon-btn{background:transparent;border:none;color:var(--text-dim);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+
+.layout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 52px);overflow:hidden}
+@media(max-width:1024px){.layout{grid-template-columns:1fr}.toc-side{display:none}}
+
+/* 左栏 TOC (D91) */
+.toc-side{background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;overflow-y:auto}
+.toc-search{display:flex;gap:6px;margin-bottom:14px}
+.toc-search input{flex:1;background:var(--surface-2);border:1px solid var(--border);
+  padding:6px 10px;border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.toc-search input:focus{border-color:var(--primary)}
+.toc-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;font-weight:600}
+.toc-list{font-size:13px}
+.toc-h2{padding:5px 8px;border-radius:5px;cursor:pointer;color:var(--text-dim);margin-bottom:2px}
+.toc-h2:hover{background:var(--surface-2);color:var(--text)}
+.toc-h2.active{background:var(--primary-dim);color:var(--primary);font-weight:500}
+.toc-h3{padding:4px 8px 4px 22px;border-radius:5px;cursor:pointer;color:var(--text-muted);font-size:12px}
+.toc-h3:hover{color:var(--text-dim)}
+
+/* 右栏 内容 */
+.content-side{overflow-y:auto;padding:32px 48px}
+.content-meta{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.content-meta .updated{flex:1}
+.content-meta button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:5px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-family:inherit;display:flex;align-items:center;gap:5px}
+.content-meta button:hover{border-color:var(--primary);color:var(--primary)}
+
+.markdown{max-width:780px;font-size:14px}
+.markdown h1{font-family:'Sora',sans-serif;font-size:28px;font-weight:700;margin:0 0 18px;background:linear-gradient(135deg,var(--primary),var(--p-biz));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.markdown h2{font-family:'Sora',sans-serif;font-size:22px;font-weight:600;margin:32px 0 14px;
+  padding-bottom:8px;border-bottom:1px solid var(--border)}
+.markdown h2 .anchor{color:var(--text-muted);text-decoration:none;margin-right:8px;font-weight:normal;opacity:0;transition:opacity .15s}
+.markdown h2:hover .anchor{opacity:1}
+.markdown h3{font-family:'Sora',sans-serif;font-size:17px;font-weight:600;margin:20px 0 10px}
+.markdown p{margin:10px 0;color:var(--text)}
+.markdown ul,.markdown ol{padding-left:24px;margin:10px 0}
+.markdown li{margin-bottom:4px}
+.markdown code{background:var(--surface-2);padding:1px 6px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-biz)}
+.markdown pre{background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:14px;margin:12px 0;overflow-x:auto;position:relative}
+.markdown pre code{background:transparent;color:var(--text);padding:0;display:block;font-size:12px;line-height:1.6}
+.markdown pre .copy{position:absolute;top:8px;right:8px;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-dim);padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer}
+.markdown blockquote{border-left:3px solid var(--primary);padding:6px 16px;background:var(--primary-dim);
+  border-radius:0 6px 6px 0;color:var(--text-dim);margin:14px 0}
+.markdown table{border-collapse:collapse;margin:14px 0;font-size:13px}
+.markdown th,.markdown td{padding:8px 12px;border:1px solid var(--border);text-align:left}
+.markdown th{background:var(--surface-2);font-weight:600}
+
+/* 高亮搜索命中 */
+mark{background:var(--primary);color:#1a1a1a;padding:0 2px;border-radius:2px}
+
+@media print{
+  .topnav,.toc-side,.content-meta button{display:none}
+  body{background:#fff;color:#000}
+  .markdown h1,.markdown h2,.markdown h3{color:#000;background:none;-webkit-text-fill-color:#000}
+  .markdown pre{background:#f5f5f5;color:#000}
+}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <button class="back">←</button>
+  <div class="crumb">首页 / <span class="current">使用指南</span></div>
+  <div class="right-actions">
+    <button class="icon-btn">🌓</button>
+    <button class="icon-btn">🔔</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- 左栏 TOC -->
+  <aside class="toc-side">
+    <div class="toc-search">
+      <input placeholder="🔍 搜索关键词..." />
+    </div>
+    <div class="toc-title">📚 目录</div>
+    <div class="toc-list">
+      <div class="toc-h2 active">一、快速开始</div>
+      <div class="toc-h3">1.1 创建第一个任务</div>
+      <div class="toc-h3">1.2 选择工作范式</div>
+      <div class="toc-h2">二、Agent 系统</div>
+      <div class="toc-h3">2.1 5 个内置 Agent</div>
+      <div class="toc-h3">2.2 经验卡片机制</div>
+      <div class="toc-h2">三、对话与工具</div>
+      <div class="toc-h3">3.1 引用文件</div>
+      <div class="toc-h3">3.2 引用 Skill</div>
+      <div class="toc-h3">3.3 Tool Calling</div>
+      <div class="toc-h2">四、知识库</div>
+      <div class="toc-h2">五、协作与共享</div>
+      <div class="toc-h2">六、定时任务</div>
+      <div class="toc-h2">七、常见问题</div>
+    </div>
+  </aside>
+
+  <!-- 右栏 内容 -->
+  <main class="content-side">
+    <div class="content-meta">
+      <span class="updated">📖 最后更新 2026-05-06 · 约 7000 字 · 阅读 ~12 分钟</span>
+      <button>✉ 反馈</button>
+      <button>🖨 打印</button>
+    </div>
+
+    <article class="markdown">
+      <h1>ICE Data Workbench 使用指南</h1>
+      <p>欢迎使用 <strong>ICE Data Workbench</strong> — AI 驱动的数据工作流工作台。本指南帮助你快速上手，了解全部核心功能。</p>
+
+      <h2 id="quick-start"><a class="anchor" href="#quick-start">#</a>一、快速开始</h2>
+      <p>从 <a href="dashboard_v3.html">Dashboard</a> 开始你的第一个任务。</p>
+
+      <h3>1.1 创建第一个任务</h3>
+      <p>在 Dashboard 的 <strong>⚡ 快速开始</strong>区，选择一个适合你场景的<mark>工作范式</mark>：</p>
+      <ul>
+        <li><strong>⚖ AB 实验</strong> — 实验设计、分流、显著性检验、报告</li>
+        <li><strong>📈 经营分析</strong> — 经营数据拆解归因</li>
+        <li><strong>🔌 版本灰度</strong> — 灰度放量监控</li>
+        <li><strong>📊 数据分析</strong> — 自由查询与探索</li>
+        <li><strong>🔥 波动分析</strong> — 指标异动归因</li>
+      </ul>
+
+      <p>或者点击 <code>+ 开放任务</code> 创建不绑定范式的自由任务。</p>
+
+      <h3>1.2 选择工作范式</h3>
+      <blockquote>每个范式都预绑定了一个专属 <strong>Agent</strong> 和一组 <strong>Skills</strong>。范式 = 任务模板 + 智能体能力的组合。</blockquote>
+
+      <h2 id="agent"><a class="anchor" href="#agent">#</a>二、Agent 系统</h2>
+      <p>Agent 是平台的核心智能体。每个 Agent 通过对话<mark>持续进化</mark>，越用越聪明。</p>
+
+      <h3>2.1 5 个内置 Agent</h3>
+      <table>
+        <thead><tr><th>Agent</th><th>范式</th><th>主要能力</th></tr></thead>
+        <tbody>
+          <tr><td>实验分析 Agent</td><td>AB 实验</td><td>分流 / 指标 / 显著性 / 报告</td></tr>
+          <tr><td>经营洞察 Agent</td><td>经营分析</td><td>指标拆解 / 趋势 / 归因 / 报告</td></tr>
+          <tr><td>灰度监控 Agent</td><td>版本灰度</td><td>灰度查询 / 版本对比 / 质量评估</td></tr>
+          <tr><td>数据分析 Agent</td><td>数据分析</td><td>SQL / 清洗 / 可视化 / 建模</td></tr>
+          <tr><td>波动归因 Agent</td><td>波动分析</td><td>异动检测 / 多维下钻 / 归因</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2.2 经验卡片机制</h3>
+      <p>对话中的高质量结论会被自动提炼为 <strong>经验卡片</strong>，经管理员审批后注入 Agent 的 System Prompt：</p>
+      <pre><span style="position:absolute;top:8px;left:8px;font-size:9px;color:var(--text-muted);font-family:monospace">flow</span><button class="copy">📋</button><code>用户对话 → 高质量结论 → AgentMemory
+       → 多次验证 → 经验卡片(draft)
+       → admin 审批 → approved
+       → 注入 System Prompt
+       → Agent 后续行为进化</code></pre>
+
+      <h2 id="chat"><a class="anchor" href="#chat">#</a>三、对话与工具</h2>
+      <p>在工作空间中你可以：</p>
+      <ul>
+        <li>📄 引用文件 / 知识库 — 让 Agent 读取上下文</li>
+        <li>⚡ 引用技能 — 强制 Agent 使用某个 Skill</li>
+        <li>📎 上传新文件 — 拖拽或点击上传，最大 20MB</li>
+      </ul>
+
+      <h3>3.3 Tool Calling</h3>
+      <p>Agent 调用 Skill 时会显示 <strong>工具调用卡片</strong>，包含：</p>
+      <ul>
+        <li>⏳ 执行中状态</li>
+        <li>✅ 完成 — 显示返回行数 / 摘要 / 文件 / 图表</li>
+        <li>❌ 失败 — 显示错误码 + [🔁 重试] [📋 复制错误] [🚩 反馈]</li>
+        <li>⏱ 超时（30s）</li>
+      </ul>
+
+      <h2 id="kb"><a class="anchor" href="#kb">#</a>四、知识库</h2>
+      <p>支持 <strong>飞书知识库</strong>和 <strong>Mify RAG</strong>，每日自动同步。在工作空间侧栏点击 🔄 可手动同步。</p>
+
+      <h2 id="collab"><a class="anchor" href="#collab">#</a>五、协作与共享</h2>
+      <p>把任务<mark>共享到公共区</mark>，其他人即可加入协作（默认 collaborate 权限）。</p>
+
+      <h2 id="schedule"><a class="anchor" href="#schedule">#</a>六、定时任务</h2>
+      <p>支持 cron 表达式自动执行：每日 09:00、每周一、每月 1 日等。</p>
+
+      <h2 id="faq"><a class="anchor" href="#faq">#</a>七、常见问题</h2>
+      <p>有问题？联系 <a href="#">@gongyunhe</a>。</p>
+    </article>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,277 @@
+.sc-page {
+  min-height: 100vh;
+}
+.sc-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+.sc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.sc-head h1 {
+  font-family: var(--font-head);
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+.sc-head p {
+  color: var(--text-dim);
+  margin: 0;
+  font-size: 13px;
+}
+.sc-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.sc-chips {
+  display: flex;
+  gap: 6px;
+}
+.sc-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sc-chip.on {
+  background: var(--primary-dim);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.sc-search {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 7px 12px;
+  font-size: 12px;
+  outline: none;
+}
+.sc-search:focus {
+  border-color: var(--primary);
+}
+
+.sc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sc-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.sc-status.on {
+  background: var(--success-dim);
+  color: var(--success);
+}
+.sc-status.off {
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+.sc-card-name {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+.sc-card-actions {
+  display: flex;
+  gap: 6px;
+  /* Batch A-3: 默认半透明，鼠标悬停在卡片上才完全显现。减少视觉噪音。 */
+  opacity: 0.25;
+  transition: opacity 0.15s ease;
+}
+.sc-card:hover .sc-card-actions,
+.sc-card:focus-within .sc-card-actions {
+  opacity: 1;
+}
+/* 触屏设备不支持 hover，保持始终可见 */
+@media (hover: none), (max-width: 720px) {
+  .sc-card-actions {
+    opacity: 1;
+  }
+}
+.sc-card-actions button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.sc-card-actions button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.sc-card-actions button.danger:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+.sc-card-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  font-size: 12px;
+}
+.sc-label {
+  display: inline-block;
+  color: var(--text-muted);
+  width: 60px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+}
+.sc-card-body code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.sc-cron-readable {
+  color: var(--text-dim);
+  margin-left: 6px;
+  font-size: 11px;
+}
+.sc-prompt {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0;
+  font-size: 12px;
+}
+.sc-prompt summary {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.sc-prompt[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+.sc-prompt pre {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  font-size: 11px;
+}
+.sc-runs-toggle button {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.sc-runs {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sc-run {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.sc-run summary {
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sc-run-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.sc-run-badge.success {
+  background: var(--success-dim);
+  color: var(--success);
+}
+.sc-run-badge.failed {
+  background: var(--error-dim);
+  color: var(--error);
+}
+.sc-run-badge.running {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+.sc-run-badge.skipped {
+  background: var(--surface-3);
+  color: var(--text-dim);
+}
+.sc-run-body {
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sc-run-body strong {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 3px;
+}
+.sc-run-body pre {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+.sc-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 12px;
+  text-align: center;
+}
+.sc-modal {
+  min-width: 480px;
+}
+.sc-modal .cm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

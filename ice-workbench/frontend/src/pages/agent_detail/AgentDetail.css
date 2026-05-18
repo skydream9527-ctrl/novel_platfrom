@@ -1,0 +1,233 @@
+.ad-page {
+  min-height: 100vh;
+}
+.ad-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ad-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.ad-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+.ad-meta {
+  flex: 1;
+}
+.ad-meta h1 {
+  font-family: var(--font-head);
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+.ad-paradigm {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.ad-meta p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.ad-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.ad-section h2 {
+  font-family: var(--font-head);
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+.ad-section h3 {
+  font-family: var(--font-head);
+  font-size: 13px;
+  margin: 22px 0 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ad-section-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.ad-skill-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ad-skill-list li {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 12px;
+}
+
+.ad-prompt-readonly {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 14px;
+}
+.ad-prompt-edit {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  outline: none;
+  resize: vertical;
+}
+.ad-prompt-edit:focus {
+  border-color: var(--primary);
+}
+.ad-prompt-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.ad-note {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 12px;
+  outline: none;
+}
+
+.ad-admin {
+  border-color: var(--agent);
+}
+.ad-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ad-history-row {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.ad-history-time {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-width: 160px;
+}
+.ad-history-meta {
+  flex: 1;
+  color: var(--text-dim);
+}
+.ad-history-actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.ad-history-actions button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.ad-empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+.ad-test {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ad-test textarea {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+.ad-test-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.ad-test-output {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+/* Batch A-2: 移动端粘底启动栏 — 桌面端隐藏，小屏显露 */
+.ad-start-sticky {
+  display: none;
+}
+@media (max-width: 720px) {
+  .ad-start-desktop {
+    display: none;
+  }
+  .ad-start-sticky {
+    display: block;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 50;
+    padding: 12px 14px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #eee);
+    border-radius: 12px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  }
+  .ad-start-sticky .btn-primary {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  /* 留给主内容底部避让空间 */
+  .ad-main {
+    padding-bottom: 92px;
+  }
+}

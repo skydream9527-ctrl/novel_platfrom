@@ -1,0 +1,144 @@
+scenarios:
+  - pattern: 新增入口/功能
+    keywords:
+      - 新增
+      - 入口
+      - 功能
+      - 添加
+      - 增加
+    hypotheses:
+      - name: 分流假设
+        description: 新入口分流了原有入口的流量
+        drill_dimensions:
+          - 各入口点击率变化
+          - 各入口转化率变化
+        typical_conclusion: 新入口分流了原有入口的流量，但整体转化率仍提升/下降
+      - name: 吸引假设
+        description: 新入口吸引了低质量用户
+        drill_dimensions:
+          - 新入口用户后续行为
+          - 原有用户后续行为对比
+          - 新入口用户留存率
+        typical_conclusion: 新入口吸引的用户质量较低/与原有用户无差异
+      - name: 布局假设
+        description: 新入口改变了页面布局，影响其他元素曝光
+        drill_dimensions:
+          - 各入口曝光量变化
+          - 各模块停留时长变化
+          - 页面滚动深度变化
+        typical_conclusion: 新入口改变了页面布局，导致其他入口曝光减少/无影响
+
+  - pattern: UI/样式变更
+    keywords:
+      - 样式
+      - UI
+      - 布局
+      - 改版
+      - 视觉
+      - 皮肤
+      - 主题
+    hypotheses:
+      - name: 注意力假设
+        description: 样式变更改变了用户注意力分布
+        drill_dimensions:
+          - 各模块停留时长变化
+          - 各模块点击率变化
+          - 视觉热力图变化
+        typical_conclusion: 样式变更导致用户注意力向某模块转移
+      - name: 交互假设
+        description: 样式变更影响了操作效率
+        drill_dimensions:
+          - 操作路径变化
+          - 操作步骤数变化
+          - 操作耗时变化
+        typical_conclusion: 样式变更使操作效率提升/降低
+
+  - pattern: 算法/推荐策略变更
+    keywords:
+      - 算法
+      - 推荐
+      - 策略
+      - 排序
+      - 召回
+      - 模型
+    hypotheses:
+      - name: 质量假设
+        description: 新策略内容质量不同
+        drill_dimensions:
+          - 内容消费完成率
+          - 负反馈率
+          - 内容评分变化
+        typical_conclusion: 新策略推荐的内容质量提升/下降
+      - name: 多样性假设
+        description: 新策略改变了内容多样性
+        drill_dimensions:
+          - 内容品类分布变化
+          - 内容来源分布变化
+          - 用户兴趣覆盖度变化
+        typical_conclusion: 新策略使内容多样性提升/下降
+      - name: 冷启动假设
+        description: 新策略对特定用户群效果不同
+        drill_dimensions:
+          - 新老用户分群效果
+          - 活跃度分群效果
+          - 兴趣偏好分群效果
+        typical_conclusion: 新策略对某类用户效果更好/更差
+      - name: 广告影响假设
+        description: 算法变更改变了广告曝光分布
+        drill_dimensions:
+          - 广告曝光率变化
+          - 广告点击率变化
+          - eCPM变化
+        typical_conclusion: 算法变更影响了广告的曝光和收入分布
+
+  - pattern: 内容/资源位调整
+    keywords:
+      - 资源位
+      - 卡片
+      - 模块
+      - 位置
+      - 排序调整
+    hypotheses:
+      - name: 曝光竞争假设
+        description: 资源位调整改变了各内容的曝光机会
+        drill_dimensions:
+          - 各资源位曝光量变化
+          - 各资源位点击率变化
+          - 内容消费深度变化
+        typical_conclusion: 资源位调整使某些内容曝光增加/减少
+      - name: 用户路径假设
+        description: 资源位调整改变了用户浏览路径
+        drill_dimensions:
+          - 用户浏览路径变化
+          - 页面停留时长分布变化
+          - 跳出率变化
+        typical_conclusion: 资源位调整使用户浏览路径变长/变短
+
+  - pattern: 交互流程变更
+    keywords:
+      - 流程
+      - 步骤
+      - 交互
+      - 操作
+      - 引导
+    hypotheses:
+      - name: 转化漏斗假设
+        description: 流程变更改变了各步骤的转化率
+        drill_dimensions:
+          - 各步骤转化率变化
+          - 整体转化率变化
+          - 流失节点变化
+        typical_conclusion: 流程变更使某步骤转化率提升/下降
+      - name: 体验摩擦假设
+        description: 流程变更增加了或减少了体验摩擦
+        drill_dimensions:
+          - 操作步骤数变化
+          - 操作耗时变化
+          - 用户放弃率变化
+        typical_conclusion: 流程变更增加了/减少了体验摩擦
+
+changelog:
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，定义5种场景模式共16个下钻假设

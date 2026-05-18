@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 通知中心 + ⌘K (v3)</title>
+<!-- 对应决策：D26 / D29 · 通知中心 380×480 + ⌘K 全局搜索 600×500 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-ab:#7bafd4;--p-ab-dim:rgba(123,175,212,.12);
+  --p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --success:#5bb98c;--success-dim:rgba(91,185,140,.12);
+  --warning:#d4a34e;--warning-dim:rgba(212,163,78,.12);
+  --error:#c97b7b;--error-dim:rgba(201,123,123,.12);
+  --info:#7bafd4;--info-dim:rgba(123,175,212,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5;padding:32px;min-height:100vh}
+h1{font-family:'Sora',sans-serif;font-size:26px;margin:0 0 6px}
+.intro{color:var(--text-dim);margin-bottom:28px;font-size:14px}
+
+.demo-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:flex-start}
+
+.demo-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;min-height:560px;position:relative}
+.demo-card h2{font-family:'Sora',sans-serif;font-size:16px;margin:0 0 6px;color:var(--primary)}
+.demo-card .desc{font-size:11px;color:var(--text-muted);margin-bottom:24px;font-family:'JetBrains Mono',monospace}
+
+/* 通知中心 380×480 */
+.notification-panel{width:380px;height:480px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);margin:0 auto}
+.notif-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.notif-head h3{font-family:'Sora',sans-serif;font-size:14px;margin:0;flex:1}
+.notif-head a{color:var(--primary);font-size:11px;text-decoration:none}
+.notif-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 8px;gap:4px}
+.notif-tab{padding:8px 12px;font-size:11px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent}
+.notif-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.notif-tab .count{background:var(--surface-3);padding:1px 5px;border-radius:6px;font-size:9px;margin-left:3px}
+
+.notif-list{flex:1;overflow-y:auto}
+.notif-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;position:relative}
+.notif-item:hover{background:var(--surface-3)}
+.notif-item.unread::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;border-radius:0 2px 2px 0}
+.notif-item.unread.exp::before{background:var(--agent)}
+.notif-item.unread.task-fail::before{background:var(--warning)}
+.notif-item.unread.collab::before{background:var(--success)}
+.notif-item.unread.token::before{background:var(--error)}
+.notif-item.unread.system::before{background:var(--info)}
+
+.notif-icon{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.notif-icon.exp{background:var(--agent-dim);color:var(--agent)}
+.notif-icon.task-fail{background:var(--warning-dim);color:var(--warning)}
+.notif-icon.collab{background:var(--success-dim);color:var(--success)}
+.notif-icon.token{background:var(--error-dim);color:var(--error)}
+.notif-icon.system{background:var(--info-dim);color:var(--info)}
+.notif-content{flex:1;min-width:0}
+.notif-title{font-weight:500;font-size:13px;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.notif-title .dot{width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0}
+.notif-desc{font-size:11px;color:var(--text-dim);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notif-meta{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;color:var(--text-muted)}
+.notif-action{margin-left:auto;color:var(--primary);text-decoration:none}
+
+/* ⌘K 搜索 600×500 */
+.search-modal{width:600px;height:500px;background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.6);margin:0 auto}
+.search-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.search-input{flex:1;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:15px;outline:none}
+.search-input::placeholder{color:var(--text-muted)}
+.kbd{background:var(--surface-3);border:1px solid var(--border);padding:1px 6px;border-radius:3px;font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+
+.search-filter{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:6px}
+.filter-chip{padding:4px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;font-size:11px;cursor:pointer;color:var(--text-dim)}
+.filter-chip.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+
+.search-results{flex:1;overflow-y:auto}
+.result-group{padding:8px 0}
+.result-group-title{padding:6px 18px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.result-item{padding:9px 18px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;transition:background .12s}
+.result-item:hover,.result-item.kbd-active{background:var(--primary-dim);color:var(--primary)}
+.result-item .ico{width:18px;text-align:center}
+.result-item .name{flex:1}
+.result-item .name mark{background:var(--primary);color:#1a1a1a;padding:0 2px;border-radius:2px}
+.result-item .meta{font-size:10px;color:var(--text-muted)}
+
+.search-footer{padding:8px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:14px;font-size:10px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<h1>通知中心 + ⌘K 全局搜索</h1>
+<p class="intro">D26 七项告警 + D29 真实通知 + ⌘K 全局搜索 600×500</p>
+
+<div class="demo-row">
+  <!-- 通知中心 -->
+  <div class="demo-card">
+    <h2>🔔 通知中心</h2>
+    <div class="desc">380 × 480px · 真实接口（删除 MOCK_NOTIFICATIONS）</div>
+
+    <div class="notification-panel">
+      <div class="notif-head">
+        <h3>通知</h3>
+        <a href="#">全部已读</a>
+      </div>
+      <div class="notif-tabs">
+        <div class="notif-tab active">全部 <span class="count">5</span></div>
+        <div class="notif-tab">待处理 <span class="count">3</span></div>
+        <div class="notif-tab">系统 <span class="count">1</span></div>
+      </div>
+      <div class="notif-list">
+        <div class="notif-item unread exp">
+          <div class="notif-icon exp">💡</div>
+          <div class="notif-content">
+            <div class="notif-title"><span class="dot"></span>经验卡片待审批</div>
+            <div class="notif-desc">经营洞察 Agent 提炼了新经验：「付费率分析需排除促销期数据」</div>
+            <div class="notif-meta">5 分钟前<a class="notif-action" href="#">去审批 →</a></div>
+          </div>
+        </div>
+        <div class="notif-item unread task-fail">
+          <div class="notif-icon task-fail">⏱</div>
+          <div class="notif-content">
+            <div class="notif-title"><span class="dot"></span>定时任务执行失败</div>
+            <div class="notif-desc">「每日 DAU 监控」任务执行异常：SQL 查询超时</div>
+            <div class="notif-meta">30 分钟前<a class="notif-action" href="#">查看详情 →</a></div>
+          </div>
+        </div>
+        <div class="notif-item unread collab">
+          <div class="notif-icon collab">👥</div>
+          <div class="notif-content">
+            <div class="notif-title"><span class="dot"></span>收到协作邀请</div>
+            <div class="notif-desc">李思涵 邀请你协作任务「Q2 用户增长分析」</div>
+            <div class="notif-meta">2 小时前<a class="notif-action" href="#">接受</a></div>
+          </div>
+        </div>
+        <div class="notif-item token">
+          <div class="notif-icon token">⚠</div>
+          <div class="notif-content">
+            <div class="notif-title">Token 余额告警</div>
+            <div class="notif-desc">当前余额 850K，已低于告警阈值 (1M)</div>
+            <div class="notif-meta">昨天</div>
+          </div>
+        </div>
+        <div class="notif-item system">
+          <div class="notif-icon system">📢</div>
+          <div class="notif-content">
+            <div class="notif-title">系统维护通知</div>
+            <div class="notif-desc">5月8日 22:00-23:00 将进行系统升级，届时服务将短暂中断</div>
+            <div class="notif-meta">2 天前</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⌘K 全局搜索 -->
+  <div class="demo-card">
+    <h2>🔍 ⌘K 全局搜索</h2>
+    <div class="desc">600 × 500px · 任务/Agent/Skill/文件/知识库</div>
+
+    <div class="search-modal">
+      <div class="search-header">
+        <span style="color:var(--text-muted);font-size:18px">🔍</span>
+        <input class="search-input" placeholder="搜索任务、Agent、Skill、文件、知识库..." value="经营" />
+        <span class="kbd">esc</span>
+      </div>
+
+      <div class="search-filter">
+        <span class="filter-chip active">全部</span>
+        <span class="filter-chip">任务</span>
+        <span class="filter-chip">Agent</span>
+        <span class="filter-chip">Skill</span>
+        <span class="filter-chip">文件</span>
+        <span class="filter-chip">知识库</span>
+      </div>
+
+      <div class="search-results">
+        <div class="result-group">
+          <div class="result-group-title">任务 (3)</div>
+          <div class="result-item kbd-active">
+            <span class="ico">📋</span>
+            <span class="name">Q2 <mark>经营</mark>复盘分析</span>
+            <span class="meta">经营分析 · 我创建的</span>
+          </div>
+          <div class="result-item">
+            <span class="ico">📋</span>
+            <span class="name">月度<mark>经营</mark>日报模板</span>
+            <span class="meta">经营分析 · 公共任务</span>
+          </div>
+          <div class="result-item">
+            <span class="ico">📋</span>
+            <span class="name"><mark>经营</mark>指标周报</span>
+            <span class="meta">经营分析 · 我协作</span>
+          </div>
+        </div>
+
+        <div class="result-group">
+          <div class="result-group-title">Agent (1)</div>
+          <div class="result-item">
+            <span class="ico">🤖</span>
+            <span class="name">📈 <mark>经营</mark>洞察 Agent</span>
+            <span class="meta">经营分析范式 · 156 对话</span>
+          </div>
+        </div>
+
+        <div class="result-group">
+          <div class="result-group-title">文件 (2)</div>
+          <div class="result-item">
+            <span class="ico">📝</span>
+            <span class="name"><mark>经营</mark>日报_0506.md</span>
+            <span class="meta">12.3 KB · 2 小时前</span>
+          </div>
+          <div class="result-item">
+            <span class="ico">📊</span>
+            <span class="name"><mark>经营</mark>数据.csv</span>
+            <span class="meta">320 KB · 公共文件</span>
+          </div>
+        </div>
+
+        <div class="result-group">
+          <div class="result-group-title">知识库 (1)</div>
+          <div class="result-item">
+            <span class="ico">📖</span>
+            <span class="name">飞书·产品 KB · KPI 体系定义（含<mark>经营</mark>分析）</span>
+            <span class="meta">飞书知识库</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-footer">
+        <span><span class="kbd">↑↓</span> 选择</span>
+        <span><span class="kbd">↵</span> 打开</span>
+        <span><span class="kbd">esc</span> 关闭</span>
+        <span style="margin-left:auto">⌘K 触发</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

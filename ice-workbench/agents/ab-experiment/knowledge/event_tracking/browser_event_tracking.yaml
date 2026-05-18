@@ -1,0 +1,180 @@
+# browser_event_tracking.yaml
+# 浏览器埋点事件知识库 - 索引文件
+# 完整数据存储在 browser_event_tracking.db (SQLite数据库)
+# 使用 import_browser_event_tracking.py 从Excel导入/更新数据
+#
+# 查询方式：
+#   sqlite3 knowledge/browser_event_tracking.db "SQL语句"
+#
+# 常用查询示例：
+#   1. 按指标查事件：
+#      SELECT e.name, e.name_cn FROM events e
+#      JOIN event_metric_refs m ON e.id=m.event_id
+#      WHERE m.metric_name='浏览器信息流人均时长';
+#
+#   2. 按页面查事件：
+#      SELECT e.name, e.name_cn FROM events e
+#      JOIN event_page_refs r ON e.id=r.event_id
+#      JOIN pages p ON r.page_id=p.id
+#      WHERE p.page_key='feed_info_topnews';
+#
+#   3. 按分类查事件：
+#      SELECT name, name_cn FROM events WHERE category='content';
+#
+#   4. 查事件完整信息：
+#      SELECT * FROM event_fields WHERE event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#      SELECT g.name FROM event_common_field_refs r JOIN common_field_groups g ON r.group_id=g.id WHERE r.event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#      SELECT p.page_key FROM event_page_refs r JOIN pages p ON r.page_id=p.id WHERE r.event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#
+#   5. 查实验ID字段：
+#      SELECT name, name_cn, type, value_note FROM common_fields WHERE name IN ('eid', 'exp_id');
+#
+#   6. 查页面定义：
+#      SELECT page_key, name_cn, category FROM pages WHERE category LIKE '%信息流%';
+
+data_source: browser_event_tracking.db
+data_format: sqlite3
+db_version: "2.0"
+import_script: import_browser_event_tracking.py
+source_file: "浏览器新版OneTrack埋点汇总（可用于神策、数鲸）.xlsx"
+product: 小米浏览器
+appid: "31000000442"
+hive_table: dw.dwd_ot_event_di_31000000442
+
+experiment_id_fields:
+  - name: eid
+    type: string
+    description: 实验id（服务端下发，公共参数）
+    location: common_fields表
+    value_format: "0:1049:0:0:0:0:0:0:0:0:0:0:0:0:199:"
+  - name: exp_id
+    type: string
+    description: 大数据新版实验id（公共参数）
+    location: common_fields表
+    value_format: "110257,114439,110057"
+
+schema:
+  tables:
+    - name: metadata
+      description: 数据库元信息（版本、来源、appid等）
+      new_in_v2: true
+    - name: categories
+      description: 事件分类定义（20个分类）
+      new_in_v2: true
+    - name: sdk_fields
+      description: OneTrack SDK系统属性（32个）
+      new_in_v2: true
+    - name: common_field_groups
+      description: 公共字段组（公共属性/信息流通用属性）
+    - name: common_fields
+      description: 公共字段定义，关联common_field_groups
+    - name: pages
+      description: 页面定义（87个页面，从"附1：页面定义"导入）
+      new_in_v2: true
+    - name: events
+      description: 事件定义（239个事件，18个有效分类）
+    - name: event_fields
+      description: 事件特有字段，关联events
+    - name: event_common_field_refs
+      description: 事件引用的公共字段组
+    - name: event_page_refs
+      description: 事件与页面的多对多关联
+      new_in_v2: true
+      replaces: event_relations中relation_type='page'
+    - name: event_metric_refs
+      description: 事件与核心指标的多对多关联
+      new_in_v2: true
+      replaces: event_relations中relation_type='metric'
+
+stats:
+  total_events: 239
+  total_event_fields: 831
+  total_common_fields: 71
+  total_common_field_groups: 2
+  total_sdk_fields: 32
+  total_pages: 87
+  total_event_page_refs: 355
+  total_event_metric_refs: 26
+  total_event_common_field_refs: 279
+  categories:
+    - name: ad
+      count: 49
+      description: 商业化事件
+    - name: content
+      count: 42
+      description: 信息流事件
+    - name: ai_search
+      count: 37
+      description: AI搜索事件
+    - name: general
+      count: 29
+      description: 常规事件（多窗口/无痕/阅读模式）
+    - name: search
+      count: 18
+      description: 搜索事件
+    - name: app
+      count: 12
+      description: 浏览器全局事件
+    - name: hot
+      count: 10
+      description: 热榜事件
+    - name: engineering
+      count: 6
+      description: 工程埋点
+    - name: personal
+      count: 6
+      description: 个人中心事件
+    - name: setting
+      count: 6
+      description: 设置事件
+    - name: push
+      count: 5
+      description: Push事件
+    - name: ai_browser
+      count: 4
+      description: AI浏览器事件
+    - name: icon_slots
+      count: 4
+      description: 站点事件
+    - name: button_bar
+      count: 3
+      description: 底部工具栏事件
+    - name: novel
+      count: 3
+      description: 小说事件
+    - name: download
+      count: 2
+      description: 下载事件
+    - name: livestream
+      count: 2
+      description: 直播事件
+    - name: download_intercept
+      count: 1
+      description: 下载拦截事件
+
+v2_optimizations_vs_content_center_db:
+  - 新增metadata表存储数据库元信息（版本/来源/appid/hive表等）
+  - 新增categories表替代硬编码分类，支持扩展
+  - 新增sdk_fields表独立存储OneTrack SDK系统属性
+  - 新增pages表存储页面定义，从Excel"附1：页面定义"导入
+  - 新增event_page_refs表替代event_relations中page关联，支持多对多
+  - 新增event_metric_refs表替代event_relations中metric关联，语义更清晰
+  - events表新增classification/incognito_report/app_ver字段
+  - event_fields表新增is_common_ref/common_group字段
+  - common_fields表新增classification/app_ver字段
+  - common_field_groups新增scope字段区分作用域（all/content）
+  - 自动从事件名模式匹配页面和指标关联
+
+changelog:
+  - date: "2026-05-09"
+    author: AI
+    action: create
+    description: |
+      创建浏览器埋点知识库（v2.0优化结构）：
+      - 从Excel导入239个事件、831个事件字段、71个公共字段
+      - 32个SDK系统属性、87个页面定义
+      - 355条事件-页面关联、21条事件-指标关联
+      - 279条公共属性引用
+      - 实验ID字段：eid/exp_id
+      - 相比内容中心数据库的结构优化：新增metadata/categories/sdk_fields/pages表
+      - event_page_refs/event_metric_refs替代原event_relations混合表

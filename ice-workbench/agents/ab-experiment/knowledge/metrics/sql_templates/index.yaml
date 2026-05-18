@@ -1,0 +1,178 @@
+dimensions:
+  - name: 浏览器主端
+    file: browser_main.yaml
+    categories:
+      规模指标:
+        - 浏览器DAU/日活
+        - 浏览器分新老用户DAU/日活
+        - 浏览器MAU/月活
+        - 浏览器主启DAU/日活
+        - 浏览器主启MAU/月活
+        - 浏览器有效DAU/日活
+        - 浏览器PUSH DAU/日活
+        - 浏览器分启动方式DAU/日活
+        - 浏览器内容中心调起DAU/日活
+        - 浏览器三方调起DAU/日活
+        - 浏览器三方调起分调起包名DAU/日活
+      消费指标:
+        - 浏览器人均使用时长
+        - 浏览器人均启动次数
+        - 浏览器人均主动启动次数
+        - 浏览器人均PUSH启动次数
+        - 浏览器人均三方启动次数
+        - 浏览器深度用户DAU
+        - 浏览器中度用户DAU
+        - 浏览器轻度用户DAU
+      收入指标:
+        - 浏览器ARPU
+        - 浏览器分启动方式ARPU
+      留存与LT指标:
+        - 浏览器次日留存率
+        - 浏览器7日留存率
+        - 浏览器30日留存率
+        - 浏览器主启次日留存率
+        - 浏览器主启7日留存率
+        - 浏览器主启30日留存率
+        - 浏览器LT3
+        - 浏览器LT7
+        - 浏览器LT30
+        - 浏览器分启动方式LT3
+        - 浏览器分启动方式LT7
+        - 浏览器分启动方式LT30
+      下钻维度:
+        - 浏览器分客户端版本DAU
+        - 浏览器分机型DAU
+        - 浏览器分系统版本DAU
+        - 浏览器分MIUI版本DAU
+        - 浏览器分省份DAU
+        - 浏览器分城市DAU
+        - 浏览器分广告位收入
+        - 浏览器分启动方式收入
+
+  - name: 浏览器信息流
+    file: browser_feed.yaml
+    categories:
+      规模指标:
+        - 浏览器信息流DAU/日活
+        - 浏览器信息流分新老用户DAU/日活
+        - 浏览器信息流消费DAU/日活
+        - 浏览器信息流PUSH DAU/日活
+        - 浏览器信息流分体裁消费DAU/日活
+        - 浏览器信息流分频道消费DAU/日活
+        - 浏览器信息流分页面消费DAU/日活
+      消费指标:
+        - 浏览器信息流分页面曝光UV/曝光PV
+        - 浏览器信息流分体裁曝光UV/曝光PV
+        - 浏览器信息流分频道曝光UV/曝光PV
+        - 浏览器信息流分页面点击UV/点击PV
+        - 浏览器信息流分体裁点击UV/点击PV
+        - 浏览器信息流分频道点击UV/点击PV
+        - 浏览器信息流人均时长
+        - 浏览器信息流人均消费时长
+        - 浏览器信息流分体裁人均消费时长
+        - 浏览器信息流人均VV
+        - 浏览器信息流分体裁人均VV
+        - 浏览器信息流消费用户人均VV
+        - 浏览器信息流人均曝光
+        - 浏览器信息流消费用户人均曝光
+      收入指标:
+        - 浏览器信息流ARPU
+        - 浏览器信息流消费用户ARPU
+      留存与LT指标:
+        - 浏览器信息流次日留存率
+        - 浏览器信息流7日留存率
+        - 浏览器信息流30日留存率
+        - 浏览器信息流LT3
+        - 浏览器信息流LT7
+        - 浏览器信息流LT30
+      下钻维度:
+        - 分内容源（火山/自建）浏览器信息流DAU/日活
+        - 分内容源（火山/自建）浏览器信息流分新老用户DAU/日活
+        - 分内容源（火山/自建）浏览器信息流消费DAU/日活
+        - 分内容源（火山/自建）浏览器信息流人均时长
+        - 分内容源（火山/自建）浏览器信息流人均消费时长
+        - 分内容源（火山/自建）浏览器信息流人均VV
+        - 分内容源（火山/自建）浏览器信息流人均曝光
+        - 浏览器信息流分广告位收入
+        - 浏览器信息流分启动方式收入
+
+  - name: 内容中心
+    file: content_center.yaml
+    categories:
+      规模指标:
+        - 内容中心DAU/日活
+        - 内容中心分新老用户DAU/日活
+        - 内容中心深度DAU/日活
+        - 内容中心有效DAU/日活
+        - 内容中心MAU
+        - 内容中心消费DAU
+      消费指标:
+        - 内容中心时长
+        - 内容中心人均时长
+        - 内容中心消费UV
+        - 内容中心VV
+        - 内容中心人均VV
+        - 内容中心消费时长
+        - 内容中心人均消费时长
+        - 内容中心分体裁消费UV
+        - 内容中心分体裁VV
+        - 内容中心分体裁消费时长
+        - 内容中心分频道消费UV
+        - 内容中心分频道VV
+        - 内容中心分频道消费时长
+        - 内容中心分页面消费UV
+        - 内容中心分页面VV
+        - 内容中心分页面消费时长
+      收入指标:
+        - 内容中心分广告位收入
+      留存与LT指标:
+        - 内容中心次日留存率
+        - 内容中心7日留存率
+        - 内容中心30日留存率
+        - 内容中心LT3
+        - 内容中心LT7
+        - 内容中心LT30
+
+drill_dimensions_summary:
+  - dimension: app_launch_way
+    description: 启动方式
+    available_in: [浏览器主端, 浏览器信息流]
+  - dimension: is_new_user
+    description: 新老用户
+    available_in: [浏览器主端, 浏览器信息流, 内容中心]
+  - dimension: item_type
+    description: 体裁
+    available_in: [浏览器信息流, 内容中心]
+  - dimension: feed_channel
+    description: 频道
+    available_in: [浏览器信息流, 内容中心]
+  - dimension: page
+    description: 页面
+    available_in: [浏览器信息流, 内容中心]
+  - dimension: source
+    description: 内容源（火山/自建）
+    available_in: [浏览器信息流]
+  - dimension: tag_id
+    description: 广告位
+    available_in: [浏览器主端, 浏览器信息流, 内容中心]
+  - dimension: app_ver
+    description: 客户端版本
+    available_in: [浏览器主端]
+  - dimension: model
+    description: 机型
+    available_in: [浏览器主端]
+  - dimension: os_ver
+    description: 系统版本
+    available_in: [浏览器主端]
+  - dimension: miui
+    description: MIUI版本
+    available_in: [浏览器主端]
+  - dimension: province
+    description: 省份
+    available_in: [浏览器主端]
+  - dimension: city
+    description: 城市
+    available_in: [浏览器主端]
+  - dimension: third_packagename
+    description: 三方调起包名
+    available_in: [浏览器主端]

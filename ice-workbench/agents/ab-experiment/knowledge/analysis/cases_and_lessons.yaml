@@ -1,0 +1,9 @@
+good_cases: []
+
+bad_cases: []
+
+changelog:
+  - date: "2026-04-28"
+    author: AI
+    action: create
+    description: 初始创建，空模板，内容随使用积累

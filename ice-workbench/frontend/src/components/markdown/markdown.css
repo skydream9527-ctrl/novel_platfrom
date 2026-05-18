@@ -1,0 +1,105 @@
+.md-body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4 {
+  font-family: var(--font-head);
+  margin: 1.4em 0 0.6em;
+}
+.md-body h1 {
+  font-size: 22px;
+}
+.md-body h2 {
+  font-size: 18px;
+}
+.md-body h3 {
+  font-size: 15px;
+}
+.md-body p {
+  margin: 0.7em 0;
+}
+.md-body ul,
+.md-body ol {
+  margin: 0.7em 0;
+  padding-left: 1.4em;
+}
+.md-body li {
+  margin: 0.25em 0;
+}
+.md-body code {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.md-body pre {
+  margin: 0;
+}
+.md-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  font-size: 13px;
+}
+.md-body th,
+.md-body td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.md-body th {
+  background: var(--surface-2);
+  font-weight: 500;
+}
+.md-body blockquote {
+  margin: 0.8em 0;
+  border-left: 3px solid var(--border);
+  padding-left: 12px;
+  color: var(--text-dim);
+}
+.md-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+.md-code-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0.8em 0;
+  overflow: hidden;
+}
+.md-code-head {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.md-lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.md-copy {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.md-copy:hover {
+  color: var(--primary);
+}

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 管理后台总览 (v3)</title>
+<!-- 对应决策：D101-D110 / D132-D133 · Layout 重构 + 待处理事项 + 全局开关 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-ab:#7bafd4;--p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --success:#5bb98c;--warning:#d4a34e;--error:#c97b7b;--info:#7bafd4;
+  --warning-dim:rgba(212,163,78,.12);--error-dim:rgba(201,123,123,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5;
+  display:grid;grid-template-rows:52px 1fr;grid-template-columns:220px 1fr;height:100vh}
+
+/* TopNav (D101) */
+.topnav{grid-column:1/-1;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:50}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;border-radius:7px;
+  background:linear-gradient(135deg,var(--primary),var(--agent));
+  display:flex;align-items:center;justify-content:center}
+.logo svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
+.brand-name{font-family:'Sora',sans-serif;font-weight:600;font-size:15px}
+.brand-name .accent{color:var(--primary)}
+.crumb{font-size:13px;color:var(--text-dim)}
+.crumb .current{color:var(--text)}
+.right-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.icon-btn{background:transparent;border:none;color:var(--text-dim);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;position:relative}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.icon-btn .badge{position:absolute;top:5px;right:5px;background:var(--error);color:#fff;font-size:9px;padding:1px 4px;border-radius:6px}
+.user-pill{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;background:var(--surface-2);border-radius:20px;border:1px solid var(--border)}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--agent));color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.user-name{font-size:12px}
+
+/* Sidebar (D132) */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px 0}
+.sb-group-title{padding:8px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text-dim);border-left:2px solid transparent;transition:all .12s}
+.sb-item:hover{background:var(--surface-2);color:var(--text)}
+.sb-item.active{background:var(--primary-dim);color:var(--primary);border-left-color:var(--primary)}
+.sb-item .ico{font-size:14px;width:18px;text-align:center}
+.sb-item .super{margin-left:auto;font-size:9px}
+.sb-collapse{padding:8px 16px;color:var(--text-muted);font-size:11px;cursor:pointer;border-top:1px solid var(--border);margin-top:14px}
+
+/* 主区 */
+.main{overflow-y:auto;padding:24px}
+.page-title{font-family:'Sora',sans-serif;font-size:22px;margin:0 0 6px}
+.page-meta{color:var(--text-muted);font-size:12px;margin-bottom:20px}
+
+/* 待处理事项卡 (D104) */
+.alert-card{background:linear-gradient(135deg,var(--warning-dim),var(--error-dim));
+  border:1px solid var(--warning);border-radius:12px;padding:18px 20px;margin-bottom:24px}
+.alert-card h3{font-family:'Sora',sans-serif;font-size:14px;margin:0 0 10px;color:var(--warning)}
+.alert-list{display:flex;flex-direction:column;gap:6px}
+.alert-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.alert-item .ico{color:var(--warning)}
+.alert-item a{margin-left:auto;color:var(--primary);text-decoration:none;font-size:11px}
+
+/* 时间筛选 + Stats (D103) */
+.time-filter{display:flex;gap:6px;margin-bottom:14px}
+.chip{background:var(--surface-2);border:1px solid var(--border);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text-dim)}
+.chip.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.stat .row{display:flex;align-items:baseline;gap:6px}
+.stat .val{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:var(--primary)}
+.stat .trend{font-size:10px;color:var(--success)}
+.stat .trend.down{color:var(--error)}
+.stat .spark{display:flex;gap:1px;height:14px;align-items:flex-end;margin-top:6px}
+.stat .spark span{flex:1;background:var(--primary);border-radius:1px 1px 0 0;opacity:.6}
+.stat .spark span:last-child{opacity:1}
+
+/* 双列 sections */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.section h3{font-family:'Sora',sans-serif;font-size:14px;margin:0 0 10px}
+.list-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.list-item:last-child{border-bottom:none}
+.list-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--agent));color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.list-info{flex:1}.list-info .name{font-weight:500}.list-info .meta{font-size:11px;color:var(--text-muted)}
+.list-time{font-size:11px;color:var(--text-muted)}
+
+/* Agent 排行 */
+.rank-list{display:flex;flex-direction:column;gap:10px}
+.rank-item{display:flex;align-items:center;gap:12px}
+.rank-num{width:24px;color:var(--text-muted);font-weight:600;font-size:13px}
+.rank-num.top{color:var(--primary)}
+.rank-info{flex:1}
+.rank-name{font-size:13px;font-weight:500;margin-bottom:4px}
+.rank-stats{font-size:10px;color:var(--text-muted);margin-bottom:4px}
+.rank-bar{height:5px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.rank-bar-fill{height:100%;background:var(--primary)}
+
+/* super_admin 全局开关 (D105) */
+.toggles{background:var(--agent-dim);border:1px solid var(--agent);border-radius:12px;padding:18px;margin-top:24px}
+.toggles h3{font-family:'Sora',sans-serif;font-size:14px;margin:0 0 14px;color:var(--agent)}
+.toggle-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(155,142,196,.2);font-size:13px}
+.toggle-row:last-child{border-bottom:none}
+.toggle-row .label{flex:1}
+.toggle-row .val{color:var(--text-muted);font-size:11px;font-family:'JetBrains Mono',monospace}
+.toggle-switch{width:36px;height:20px;background:var(--surface-3);border-radius:10px;position:relative;cursor:pointer;transition:background .15s}
+.toggle-switch.on{background:var(--success)}
+.toggle-switch::after{content:"";position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .15s}
+.toggle-switch.on::after{left:18px}
+.toggle-row a{color:var(--primary);text-decoration:none;font-size:11px}
+</style>
+</head>
+<body>
+<!-- TopNav -->
+<nav class="topnav">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <span class="brand-name"><span class="accent">ICE</span> 管理后台</span>
+  </div>
+  <span class="crumb">首页 / 管理后台 / <span class="current">概览</span></span>
+  <div class="right-actions">
+    <button class="icon-btn">🌓</button>
+    <button class="icon-btn">🔔<span class="badge">3</span></button>
+    <div class="user-pill"><div class="user-avatar">管</div><span class="user-name">系统管理员</span></div>
+  </div>
+</nav>
+
+<!-- Sidebar 4 分组 (D132) -->
+<aside class="sidebar">
+  <div class="sb-group-title">监控</div>
+  <div class="sb-item active"><span class="ico">📊</span>概览</div>
+  <div class="sb-item"><span class="ico">📈</span>用量统计</div>
+  <div class="sb-item"><span class="ico">🔍</span>SQL 审计</div>
+
+  <div class="sb-group-title">内容审核</div>
+  <div class="sb-item"><span class="ico">🛡</span>审核中心</div>
+  <div class="sb-item"><span class="ico">💡</span>经验卡片</div>
+  <div class="sb-item"><span class="ico">🌐</span>公共任务</div>
+  <div class="sb-item"><span class="ico">📋</span>任务模板</div>
+  <div class="sb-item"><span class="ico">📁</span>文件管理</div>
+
+  <div class="sb-group-title">资源管理</div>
+  <div class="sb-item"><span class="ico">🤖</span>Agents</div>
+  <div class="sb-item"><span class="ico">⚡</span>Skills</div>
+  <div class="sb-item"><span class="ico">🧩</span>范式预设</div>
+  <div class="sb-item"><span class="ico">📚</span>知识库</div>
+
+  <div class="sb-group-title">用户与配置</div>
+  <div class="sb-item"><span class="ico">👥</span>用户管理</div>
+  <div class="sb-item"><span class="ico">⚙</span>系统配置 <span class="super">🛡</span></div>
+
+  <div class="sb-collapse">◁ 折叠侧栏</div>
+</aside>
+
+<!-- 主区 -->
+<main class="main">
+  <h1 class="page-title">📊 概览</h1>
+  <p class="page-meta">查看平台运营全景</p>
+
+  <!-- 待处理事项 (D104) -->
+  <div class="alert-card">
+    <h3>🚨 待处理事项</h3>
+    <div class="alert-list">
+      <div class="alert-item"><span class="ico">💡</span>5 条经验卡片待审批<a href="#">→ 立即审批</a></div>
+      <div class="alert-item"><span class="ico">🌐</span>2 个公共任务待审核<a href="#">→ 立即审核</a></div>
+      <div class="alert-item"><span class="ico">⏱</span>1 个定时任务昨日失败<a href="#">→ 查看详情</a></div>
+      <div class="alert-item"><span class="ico">⚠</span>Token 余额 850K，已低于告警阈值（1M）<a href="#">→ 联系充值</a></div>
+    </div>
+  </div>
+
+  <!-- 时间筛选 + Stats (D103) -->
+  <div class="time-filter">
+    <span class="chip">7 天</span>
+    <span class="chip active">30 天</span>
+    <span class="chip">本月</span>
+    <span class="chip">自定义</span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="label">用户数</div><div class="row"><span class="val">12</span><span class="trend">↑ +3</span></div><div class="spark"><span style="height:30%"></span><span style="height:50%"></span><span style="height:45%"></span><span style="height:65%"></span><span style="height:55%"></span><span style="height:75%"></span><span style="height:90%"></span></div></div>
+    <div class="stat"><div class="label">任务总数</div><div class="row"><span class="val" style="color:var(--p-biz)">45</span><span class="trend">↑ +8</span></div><div class="spark"><span style="height:40%;background:var(--p-biz)"></span><span style="height:55%;background:var(--p-biz)"></span><span style="height:65%;background:var(--p-biz)"></span><span style="height:60%;background:var(--p-biz)"></span><span style="height:75%;background:var(--p-biz)"></span><span style="height:80%;background:var(--p-biz)"></span><span style="height:95%;background:var(--p-biz)"></span></div></div>
+    <div class="stat"><div class="label">对话消息</div><div class="row"><span class="val" style="color:var(--p-data)">3.2K</span><span class="trend">↑ +540</span></div><div class="spark"><span style="height:35%;background:var(--p-data)"></span><span style="height:55%;background:var(--p-data)"></span><span style="height:50%;background:var(--p-data)"></span><span style="height:70%;background:var(--p-data)"></span><span style="height:65%;background:var(--p-data)"></span><span style="height:85%;background:var(--p-data)"></span><span style="height:100%;background:var(--p-data)"></span></div></div>
+    <div class="stat"><div class="label">本月成本</div><div class="row"><span class="val" style="color:var(--agent)">$48</span><span class="trend down">↑ +$12</span></div><div class="spark"><span style="height:30%;background:var(--agent)"></span><span style="height:45%;background:var(--agent)"></span><span style="height:55%;background:var(--agent)"></span><span style="height:50%;background:var(--agent)"></span><span style="height:70%;background:var(--agent)"></span><span style="height:80%;background:var(--agent)"></span><span style="height:90%;background:var(--agent)"></span></div></div>
+  </div>
+
+  <!-- 双列 sections -->
+  <div class="two-col">
+    <div class="section">
+      <h3>最近注册用户</h3>
+      <div class="list-item">
+        <div class="list-avatar">王</div>
+        <div class="list-info"><div class="name">王子轩</div><div class="meta">研发工程师 · 基础架构</div></div>
+        <div class="list-time">2 小时前</div>
+      </div>
+      <div class="list-item">
+        <div class="list-avatar" style="background:linear-gradient(135deg,var(--p-data),var(--p-biz))">李</div>
+        <div class="list-info"><div class="name">李思涵</div><div class="meta">数据分析师 · 商业化</div></div>
+        <div class="list-time">昨天</div>
+      </div>
+      <div class="list-item">
+        <div class="list-avatar">张</div>
+        <div class="list-info"><div class="name">张明远</div><div class="meta">产品经理 · 增长</div></div>
+        <div class="list-time">3 天前</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>最近操作日志</h3>
+      <div class="list-item">
+        <div class="list-info"><div class="name">系统管理员</div><div class="meta">审核 Agent · 经营洞察 Agent</div></div>
+        <div class="list-time">5 分钟前</div>
+      </div>
+      <div class="list-item">
+        <div class="list-info"><div class="name">系统管理员</div><div class="meta">创建用户 · 王子轩</div></div>
+        <div class="list-time">2 小时前</div>
+      </div>
+      <div class="list-item">
+        <div class="list-info"><div class="name">系统管理员</div><div class="meta">审批经验卡片 · 渠道归因优先级</div></div>
+        <div class="list-time">昨天</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent 使用排行 (D103 真实接口) -->
+  <div class="section">
+    <h3>🤖 Agent 使用排行</h3>
+    <div class="rank-list">
+      <div class="rank-item">
+        <span class="rank-num top">#1</span>
+        <div class="rank-info">
+          <div class="rank-name">📈 经营洞察 Agent</div>
+          <div class="rank-stats">156 对话 · 96% 满意</div>
+          <div class="rank-bar"><div class="rank-bar-fill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="rank-item">
+        <span class="rank-num top">#2</span>
+        <div class="rank-info">
+          <div class="rank-name">📊 数据分析 Agent</div>
+          <div class="rank-stats">134 对话 · 94% 满意</div>
+          <div class="rank-bar"><div class="rank-bar-fill" style="width:86%"></div></div>
+        </div>
+      </div>
+      <div class="rank-item">
+        <span class="rank-num top">#3</span>
+        <div class="rank-info">
+          <div class="rank-name">🔥 波动归因 Agent</div>
+          <div class="rank-stats">89 对话 · 92% 满意</div>
+          <div class="rank-bar"><div class="rank-bar-fill" style="width:57%"></div></div>
+        </div>
+      </div>
+      <div class="rank-item">
+        <span class="rank-num">#4</span>
+        <div class="rank-info">
+          <div class="rank-name">⚖ 实验分析 Agent</div>
+          <div class="rank-stats">67 对话 · 95% 满意</div>
+          <div class="rank-bar"><div class="rank-bar-fill" style="width:43%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- super_admin 全局开关 (D105) -->
+  <div class="toggles">
+    <h3>🛡 全局开关 <span style="color:var(--text-muted);font-size:11px;font-weight:normal">仅超级管理员可见</span></h3>
+    <div class="toggle-row">
+      <span class="label">开放注册</span>
+      <span class="val">enable_open_register</span>
+      <div class="toggle-switch"></div>
+      <a href="#">详情 →</a>
+    </div>
+    <div class="toggle-row">
+      <span class="label">公共任务审核制</span>
+      <span class="val">enable_public_task_review</span>
+      <div class="toggle-switch"></div>
+      <a href="#">详情 →</a>
+    </div>
+    <div class="toggle-row">
+      <span class="label">飞书严格白名单</span>
+      <span class="val">enable_feishu_strict_whitelist</span>
+      <div class="toggle-switch on"></div>
+      <a href="#">详情 →</a>
+    </div>
+  </div>
+</main>
+
+<script>
+document.querySelectorAll('.toggle-switch').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+</script>
+</body>
+</html>

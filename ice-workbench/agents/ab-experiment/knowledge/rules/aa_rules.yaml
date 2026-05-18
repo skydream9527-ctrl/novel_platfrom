@@ -1,0 +1,36 @@
+duration: 7d
+natural_week_coverage: optional
+
+fluctuation_thresholds:
+  - traffic_level: 小流量
+    range: "±1%"
+    description: 小流量场景下，AA波动在±1%以内视为正常
+  - traffic_level: 适中流量
+    experiment_dau_range:
+      min: 50000
+      max: 100000
+    range: "±0.5%"
+    description: 适中流量场景（实验DAU约5-10万），AA波动在±0.5%以内视为正常
+
+anomaly_handling:
+  reassign_traffic: false
+  deduct_baseline: true
+  deduction_formula: "(AB实验组变化 - AB对照组变化) - (AA实验组变化 - AA对照组变化)"
+  description: AA异常时无需重新分配流量，在AB结果中扣除AA基线偏移量
+
+exemption:
+  allowed: false
+  principle: 原则上不允许免AA实验
+  exception: 若遗漏AA且实验为大场景（用户规模较大），可免AA
+  exception_reason: 大DAU产品数据波动较小
+  extra_attention: 免AA实验在分析时需额外关注数据基线的稳定性
+
+changelog:
+  - date: "2026-04-28"
+    author: AI
+    action: update
+    description: "中流量→适中流量，dau_range→experiment_dau_range，明确指实验本身规模而非页面流量档位"
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，基于SOP定义AA实验规则（波动阈值、异常处理、免AA条件）

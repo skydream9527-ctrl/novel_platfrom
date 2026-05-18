@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 产品介绍 (v3)</title>
+<!-- 对应决策：D96-D100 · 简化为业务介绍 + 4 场景案例 + 强 CTA -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--border:#3d3d3d;
+  --text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-hover:#f0a06e;--primary-dim:rgba(232,145,90,.12);
+  --agent:#9b8ec4;--p-ab:#7bafd4;--p-biz:#d4a34e;--p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --p-ab-dim:rgba(123,175,212,.12);--p-biz-dim:rgba(212,163,78,.12);
+  --p-data-dim:rgba(107,170,142,.12);--p-wave-dim:rgba(201,123,123,.12);
+  --p-gray-dim:rgba(155,142,196,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.6;overflow-x:hidden}
+
+/* L3 展示型背景 */
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.06;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0;opacity:.08}
+.orb-1{top:-150px;left:30%;width:600px;height:400px;background:radial-gradient(circle,var(--primary),transparent 60%);animation:float 12s ease-in-out infinite}
+.orb-2{bottom:-200px;right:10%;width:500px;height:500px;background:radial-gradient(circle,var(--agent),transparent 60%);animation:float 15s ease-in-out infinite reverse}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(15px,-20px)}}
+
+.nav{height:60px;display:flex;align-items:center;padding:0 32px;gap:24px;
+  background:rgba(33,33,33,.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--agent));
+  display:flex;align-items:center;justify-content:center}
+.logo svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
+.brand-name{font-family:'Sora',sans-serif;font-weight:600;font-size:16px}
+.brand-name .accent{color:var(--primary)}
+.nav-links{display:flex;gap:18px;font-size:13px}
+.nav-links a{color:var(--text-dim);text-decoration:none}
+.nav-links a:hover{color:var(--primary)}
+.nav-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nav-actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;width:36px;height:36px;border-radius:6px;font-size:14px}
+.cta-nav{background:var(--primary);color:#1a1a1a;padding:8px 16px;border-radius:7px;font-weight:600;text-decoration:none;font-size:13px;border:none;cursor:pointer}
+.cta-nav:hover{background:var(--primary-hover)}
+
+.container{max-width:1080px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* Hero */
+.hero{padding:80px 0 60px;text-align:center}
+.hero-tag{display:inline-block;padding:5px 12px;background:var(--primary-dim);color:var(--primary);
+  border-radius:20px;font-size:11px;font-weight:500;margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+.hero h1{font-family:'Sora',sans-serif;font-size:48px;font-weight:700;margin:0 0 16px;line-height:1.2}
+.hero h1 .accent{background:linear-gradient(135deg,var(--primary),var(--agent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:17px;color:var(--text-dim);max-width:680px;margin:0 auto 32px}
+.hero-cta{display:flex;gap:12px;justify-content:center;margin-bottom:48px}
+.btn-primary{background:var(--primary);color:#1a1a1a;padding:12px 28px;border-radius:8px;
+  font-weight:600;text-decoration:none;font-size:14px;border:none;cursor:pointer}
+.btn-secondary{background:var(--surface);color:var(--text);padding:12px 28px;border-radius:8px;
+  border:1px solid var(--border);text-decoration:none;font-size:14px;cursor:pointer}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);max-width:680px;margin:0 auto;gap:16px}
+.hero-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.hero-stat .num{font-family:'Sora',sans-serif;font-size:28px;font-weight:700;color:var(--primary)}
+.hero-stat .label{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* Section */
+.section{padding:60px 0}
+.section-header{text-align:center;margin-bottom:36px}
+.section-tag{display:inline-block;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:500;margin-bottom:12px}
+.tag-primary{background:var(--primary-dim);color:var(--primary)}
+.tag-biz{background:var(--p-biz-dim);color:var(--p-biz)}
+.tag-data{background:var(--p-data-dim);color:var(--p-data)}
+.section-header h2{font-family:'Sora',sans-serif;font-size:32px;font-weight:700;margin:0 0 8px}
+.section-header p{color:var(--text-dim);font-size:14px}
+
+/* 核心概念 6 卡 */
+.concept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.concept-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;transition:all .2s}
+.concept-card:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.concept-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.icon-primary{background:var(--primary-dim);color:var(--primary)}
+.icon-biz{background:var(--p-biz-dim);color:var(--p-biz)}
+.icon-purple{background:var(--p-gray-dim);color:var(--p-gray)}
+.icon-data{background:var(--p-data-dim);color:var(--p-data)}
+.icon-wave{background:var(--p-wave-dim);color:var(--p-wave)}
+.icon-ab{background:var(--p-ab-dim);color:var(--p-ab)}
+.concept-card h3{font-family:'Sora',sans-serif;font-size:16px;font-weight:600;margin:0 0 8px}
+.concept-card p{color:var(--text-dim);font-size:13px;margin:0;line-height:1.65}
+
+/* 实际案例 4 卡 (D97) */
+.case-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.case-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
+  position:relative;overflow:hidden;transition:all .2s}
+.case-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px}
+.case-card.ab::before{background:var(--p-ab)}.case-card.biz::before{background:var(--p-biz)}
+.case-card.wave::before{background:var(--p-wave)}.case-card.data::before{background:var(--p-data)}
+.case-card:hover{transform:translateY(-3px);border-color:var(--primary)}
+.case-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.case-icon{font-size:24px}
+.case-card h3{font-family:'Sora',sans-serif;font-size:16px;margin:0;font-weight:600}
+.case-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:4px}
+.case-tag.ab{background:var(--p-ab-dim);color:var(--p-ab)}
+.case-tag.biz{background:var(--p-biz-dim);color:var(--p-biz)}
+.case-tag.wave{background:var(--p-wave-dim);color:var(--p-wave)}
+.case-tag.data{background:var(--p-data-dim);color:var(--p-data)}
+.case-card p{color:var(--text-dim);font-size:13px;margin:0 0 14px;line-height:1.6}
+.case-cta{color:var(--primary);font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.case-cta:hover{color:var(--primary-hover)}
+
+/* 功能特性 (无 status，纯展示 D96) */
+.feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;gap:12px}
+.feat-num{width:28px;height:28px;border-radius:6px;background:var(--primary-dim);color:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:14px;flex-shrink:0}
+.feat-card h4{margin:0 0 4px;font-size:14px;font-family:'Sora',sans-serif;font-weight:600}
+.feat-card p{margin:0;font-size:12px;color:var(--text-dim)}
+
+footer{padding:32px 0 60px;text-align:center;color:var(--text-muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<nav class="nav">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <span class="brand-name"><span class="accent">ICE</span> Data Workbench</span>
+  </div>
+  <div class="nav-links">
+    <a href="#concepts">核心概念</a>
+    <a href="#cases">实际案例</a>
+    <a href="#features">功能特性</a>
+  </div>
+  <div class="nav-actions">
+    <button>🌓</button>
+    <a class="cta-nav" href="login_v3.html">立即体验 →</a>
+  </div>
+</nav>
+
+<div class="container">
+  <!-- Hero -->
+  <section class="hero">
+    <span class="hero-tag">AI 数据工作流</span>
+    <h1>用 <span class="accent">对话</span> 完成<br/>所有数据任务</h1>
+    <p>通过 Agent + 对话驱动，帮助互联网产品团队高效完成数据分析、实验评估、经营洞察等各类数据任务。Agent 在每次对话中持续进化，越用越聪明。</p>
+    <div class="hero-cta">
+      <a class="btn-primary" href="login_v3.html">立即体验 →</a>
+      <a class="btn-secondary" href="guide_v3.html">查看使用指南</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">10</div><div class="label">功能模块</div></div>
+      <div class="hero-stat"><div class="num">5</div><div class="label">智能 Agent</div></div>
+      <div class="hero-stat"><div class="num">25</div><div class="label">本地 Skills</div></div>
+      <div class="hero-stat"><div class="num">13</div><div class="label">LLM 模型</div></div>
+    </div>
+  </section>
+
+  <!-- 核心概念 -->
+  <section class="section" id="concepts">
+    <div class="section-header">
+      <span class="section-tag tag-primary">CORE CONCEPTS</span>
+      <h2>核心概念</h2>
+      <p>理解 ICE Data Workbench 的六大核心</p>
+    </div>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="concept-icon icon-primary">📋</div>
+        <h3>任务 (Task)</h3>
+        <p>用户发起的一次数据工作流，每个任务有独立工作空间，记录完整对话历史和文件产出。</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon icon-biz">🤖</div>
+        <h3>Agent</h3>
+        <p>公共智能体，与工作范式 1:1 绑定。通过对话持续进化，经验卡片注入使其越用越聪明。</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon icon-purple">⚡</div>
+        <h3>Skill</h3>
+        <p>可执行工具，具备 tool_schema。Agent 通过 function calling 调用 Skill 完成数据查询、分析、可视化。</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon icon-data">✨</div>
+        <h3>经验卡片</h3>
+        <p>从对话中自动提炼的规则与知识。经审批后注入 Agent 上下文，驱动 Agent 能力进化。</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon icon-wave">🎯</div>
+        <h3>工作范式</h3>
+        <p>5 种预置任务模板 — AB 实验、经营分析、版本灰度、数据分析、波动分析，绑定专属 Agent + Skills。</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon icon-ab">🌐</div>
+        <h3>公共区</h3>
+        <p>团队共享的 Agents、Skills、Files 和任务模板。知识沉淀与复用的核心。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 实际案例 4 卡 (D97) -->
+  <section class="section" id="cases">
+    <div class="section-header">
+      <span class="section-tag tag-biz">USE CASES</span>
+      <h2>实际案例</h2>
+      <p>看看 Agent 实际能做什么</p>
+    </div>
+    <div class="case-grid">
+      <div class="case-card ab">
+        <div class="case-head">
+          <span class="case-icon">⚖</span>
+          <h3>跑一个 AB 实验分析</h3>
+          <span class="case-tag ab">AB 实验</span>
+        </div>
+        <p>从分流验证到显著性结论一气呵成。Agent 自动检查样本均衡性、计算指标、做 t-test、写出可发布报告。</p>
+        <a class="case-cta" href="login_v3.html">用 实验分析 Agent 创建 →</a>
+      </div>
+      <div class="case-card biz">
+        <div class="case-head">
+          <span class="case-icon">📈</span>
+          <h3>做一份每日经营日报</h3>
+          <span class="case-tag biz">经营分析 + 定时</span>
+        </div>
+        <p>每天早上自动到飞书。一次配置：定时 09:00 拉数据、对比同环比、归因异常、生成日报、推送飞书群。</p>
+        <a class="case-cta" href="login_v3.html">用 经营洞察 Agent 创建 →</a>
+      </div>
+      <div class="case-card wave">
+        <div class="case-head">
+          <span class="case-icon">🔥</span>
+          <h3>定位指标异常</h3>
+          <span class="case-tag wave">波动分析</span>
+        </div>
+        <p>多维下钻 + 根因 + 影响评估。Agent 自动按渠道/版本/地域逐层下钻，关联事件，给出根因和影响评估。</p>
+        <a class="case-cta" href="login_v3.html">用 波动归因 Agent 创建 →</a>
+      </div>
+      <div class="case-card data">
+        <div class="case-head">
+          <span class="case-icon">📊</span>
+          <h3>写一段 SQL 跑数</h3>
+          <span class="case-tag data">数据分析</span>
+        </div>
+        <p>NL→SQL → 可视化 → 导出。用自然语言描述需求，Agent 生成 SQL，跑数后自动可视化，可导出 CSV/PNG。</p>
+        <a class="case-cta" href="login_v3.html">用 数据分析 Agent 创建 →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 功能特性 (D96 去掉 status) -->
+  <section class="section" id="features">
+    <div class="section-header">
+      <span class="section-tag tag-data">FEATURES</span>
+      <h2>覆盖完整功能</h2>
+      <p>从认证到管理的全套产品能力</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="feat-num">01</div><div><h4>认证与用户系统</h4><p>三级角色 + 飞书登录 + JWT 双 Token + 安全加固</p></div></div>
+      <div class="feat-card"><div class="feat-num">02</div><div><h4>Dashboard 首页</h4><p>三区同屏：快速开始 / 我的任务 / 团队资产</p></div></div>
+      <div class="feat-card"><div class="feat-num">03</div><div><h4>工作空间</h4><p>三栏 + 流式对话 + Tool Calling + 文件引用</p></div></div>
+      <div class="feat-card"><div class="feat-num">04</div><div><h4>Agent 进化机制</h4><p>1:1 绑定 + 对话驱动 + 经验卡片审批</p></div></div>
+      <div class="feat-card"><div class="feat-num">05</div><div><h4>Skill Tool Calling</h4><p>tool_schema + 5 轮循环 + SQL 安全审计</p></div></div>
+      <div class="feat-card"><div class="feat-num">06</div><div><h4>知识库同步</h4><p>飞书每日同步 + Mify RAG + 工作区目录</p></div></div>
+      <div class="feat-card"><div class="feat-num">07</div><div><h4>协作与共享</h4><p>邀请协作者 + 公共任务多人协同</p></div></div>
+      <div class="feat-card"><div class="feat-num">08</div><div><h4>定时任务</h4><p>cron 配置 + Agent 自动执行 + 推送</p></div></div>
+      <div class="feat-card"><div class="feat-num">09</div><div><h4>成本管控</h4><p>单价 + 月度预算 + Token 实时监控</p></div></div>
+      <div class="feat-card"><div class="feat-num">10</div><div><h4>管理后台</h4><p>14 页完整运营 + 三级权限 + 审核中心</p></div></div>
+    </div>
+  </section>
+</div>
+
+<footer>ICE Data Workbench v3 · 2026-05-07</footer>
+</body>
+</html>

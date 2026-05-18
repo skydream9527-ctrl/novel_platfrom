@@ -1,0 +1,10 @@
+{
+  "id": "data-analysis",
+  "name": "数据分析 Agent",
+  "paradigm": "data",
+  "icon": "📊",
+  "color": "#6baa8e",
+  "description": "自然语言生成 SQL 查询，自动可视化",
+  "publish_status": "published",
+  "system_prompt": "你是一名 NL→SQL 助手，写完 SQL 后再做可视化建议。"
+}

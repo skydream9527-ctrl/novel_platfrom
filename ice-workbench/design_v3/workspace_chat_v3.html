@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · Workspace 对话 (v3)</title>
+<!-- 对应决策：D37-D49 · react-markdown + Tool Calling 升级 + 反馈 hover + Citation 默认展开 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --success:#5bb98c;--success-dim:rgba(91,185,140,.12);
+  --warning:#d4a34e;--warning-dim:rgba(212,163,78,.12);
+  --error:#c97b7b;--error-dim:rgba(201,123,123,.12);
+  --info:#7bafd4;--info-dim:rgba(123,175,212,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;
+  height:100vh;display:flex;flex-direction:column;line-height:1.5}
+
+.header{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.header h1{font-family:'Sora',sans-serif;font-size:15px;margin:0}
+.header .model{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);
+  padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
+.header .actions{display:flex;gap:6px}
+.header .actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  padding:5px 10px;font-size:12px;border-radius:5px}
+
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:18px;max-width:920px;margin:0 auto;width:100%}
+
+.msg{display:flex;gap:12px;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{justify-content:flex-end}
+.avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:14px;color:#fff;font-weight:600}
+.avatar.u{background:linear-gradient(135deg,#c27040,var(--primary))}
+.avatar.a{background:var(--p-biz-dim);color:var(--p-biz)}
+.avatar.t{background:var(--warning-dim);color:var(--warning)}
+.bubble-wrap{max-width:75%;display:flex;flex-direction:column;gap:6px;position:relative}
+.bubble{padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.65}
+.msg.user .bubble{background:linear-gradient(135deg,#c27040,var(--primary));color:#fff;border-radius:12px 12px 4px 12px}
+.msg.agent .bubble{background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 12px 4px}
+
+/* Markdown 元素演示 (D37) */
+.bubble h3{font-family:'Sora',sans-serif;font-size:14px;margin:8px 0 4px;font-weight:600}
+.bubble ul,.bubble ol{padding-left:20px;margin:6px 0}
+.bubble li{margin-bottom:2px}
+.bubble code{background:var(--surface-2);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-biz)}
+.bubble pre{background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:12px;
+  overflow-x:auto;margin:8px 0;position:relative}
+.bubble pre code{background:transparent;color:var(--text);padding:0;font-size:12px;display:block;line-height:1.6}
+.bubble pre .copy-btn{position:absolute;top:6px;right:6px;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-dim);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;opacity:0;transition:opacity .15s}
+.bubble pre:hover .copy-btn{opacity:1}
+.bubble .lang-tag{font-size:9px;color:var(--text-muted);position:absolute;top:6px;left:8px;font-family:'JetBrains Mono',monospace}
+.bubble strong{color:var(--primary)}
+
+/* 反馈条 hover (D47) */
+.feedback{display:none;gap:4px;margin-top:4px}
+.bubble-wrap:hover .feedback{display:flex}
+.feedback button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:12px;transition:all .15s}
+.feedback button:hover{border-color:var(--primary);color:var(--primary)}
+.feedback button.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+
+/* 引用来源 默认展开第 1 条 (D49) */
+.citations{background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px}
+.cite-toggle{display:flex;align-items:center;gap:6px;color:var(--text-dim);cursor:pointer;font-size:11px;margin-bottom:6px}
+.cite-item{padding:6px 8px;border-left:2px solid var(--info);background:var(--info-dim);
+  border-radius:0 5px 5px 0;margin-bottom:5px}
+.cite-item .title{font-weight:500;font-size:12px;color:var(--info)}
+.cite-item .snippet{color:var(--text-dim);font-size:11px;margin-top:3px}
+.cite-item.collapsed{display:none}
+.citations.expanded .cite-item.collapsed{display:block}
+
+/* Tool Calling 卡片 (D38-D39) */
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;
+  border-left:3px solid var(--success);margin-top:0}
+.tool-card.executing{border-left-color:var(--warning)}
+.tool-card.error{border-left-color:var(--error)}
+.tool-card.timeout{border-left-color:var(--info)}
+.tool-head{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;font-weight:500}
+.tool-head .ico{font-size:14px}
+.tool-head .name{flex:1}
+.tool-head .duration{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.tool-args{background:var(--surface-2);border-radius:6px;padding:6px 10px;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--text-dim);margin:6px 0;line-height:1.6;white-space:pre}
+.tool-args-toggle{color:var(--primary);font-size:11px;cursor:pointer;margin-top:4px}
+.tool-result{background:var(--success-dim);padding:6px 10px;border-radius:5px;font-size:12px;color:var(--success)}
+.tool-result.fail{background:var(--error-dim);color:var(--error)}
+.tool-error-code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:4px}
+.tool-fail-actions{display:flex;gap:6px;margin-top:8px}
+.tool-fail-actions button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit}
+.tool-file-card{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;margin-top:8px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px}
+.tool-file-card .ico{font-size:18px}
+.tool-file-card .info{flex:1}
+.tool-file-card .name{font-weight:500}
+.tool-file-card .meta{color:var(--text-muted);font-size:10px}
+
+/* InlineChart 占位 (D 现有) */
+.chart-placeholder{height:160px;background:var(--surface-2);border-radius:6px;margin-top:8px;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:12px;gap:0;position:relative}
+.chart-bars{display:flex;gap:4px;align-items:flex-end;height:120px}
+.chart-bars span{flex:1;background:var(--primary);border-radius:3px 3px 0 0;opacity:.7}
+.chart-title{position:absolute;top:8px;left:12px;font-size:11px;color:var(--text-muted)}
+
+/* 推荐追问 (D48 emoji 改 ✨) */
+.followups{background:var(--surface-2);border-radius:8px;padding:10px 12px;margin-top:6px;
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.followup-label{font-size:11px;color:var(--text-muted);margin-right:4px}
+.followup-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+  padding:5px 10px;border-radius:14px;font-size:12px;cursor:pointer;font-family:inherit}
+.followup-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* Typing 三点 */
+.typing{display:flex;gap:4px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px 12px 12px 4px;width:fit-content;align-items:center}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--primary-hover);
+  animation:bounce 1.4s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-6px);opacity:1}}
+
+/* 输入区 (D40-D44) */
+.input-area{padding:14px 24px;border-top:1px solid var(--border);background:var(--surface);max-width:920px;margin:0 auto;width:100%}
+.refs-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;font-size:11px;align-items:center}
+.refs-count{color:var(--text-muted);margin-right:6px}
+.ref-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px}
+.ref-tag.file{background:var(--p-biz-dim);color:var(--p-biz)}
+.ref-tag.skill{background:var(--primary-dim);color:var(--primary)}
+.ref-tag.kb{background:var(--info-dim);color:var(--info)}
+.ref-tag .x{cursor:pointer;opacity:.7;margin-left:2px}
+.input-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.input-row{display:flex;align-items:flex-start;gap:8px}
+.input-box textarea{flex:1;background:transparent;border:none;color:var(--text);resize:none;
+  font-family:inherit;font-size:13px;outline:none;min-height:22px;max-height:120px}
+.input-row .model{background:var(--surface-3);border:1px solid var(--border);padding:3px 8px;
+  border-radius:5px;font-size:11px;color:var(--text-dim);cursor:pointer}
+.input-actions{display:flex;align-items:center;gap:4px;margin-top:6px}
+.input-actions button{background:transparent;border:none;color:var(--text-dim);
+  width:28px;height:28px;border-radius:5px;cursor:pointer;font-size:14px}
+.input-actions button:hover{background:var(--surface-3);color:var(--text)}
+.input-actions .send{margin-left:auto;background:var(--primary);color:#1a1a1a;width:auto;padding:6px 14px;font-weight:600;font-size:12px}
+.input-actions .pause{background:var(--warning);color:#1a1a1a;width:auto;padding:6px 14px;font-weight:600;font-size:12px}
+.input-hint{font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;gap:14px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📈 Q2 经营复盘分析</h1>
+  <div class="actions">
+    <button>💾 导出对话</button>
+    <button>🗑 清空</button>
+  </div>
+  <span class="model">Claude Opus 4.7 ▾</span>
+</div>
+
+<div class="messages">
+  <!-- 用户消息 -->
+  <div class="msg user">
+    <div class="bubble-wrap">
+      <div class="bubble">分析一下上周新版本的留存指标变化，重点看新老用户分层</div>
+    </div>
+    <div class="avatar u">我</div>
+  </div>
+
+  <!-- Tool Calling 执行中 -->
+  <div class="msg agent">
+    <div class="avatar t">⚡</div>
+    <div class="bubble-wrap">
+      <div class="tool-card executing">
+        <div class="tool-head"><span class="ico">⏳</span><span class="name">正在执行 · SQL 查询</span></div>
+        <div class="tool-args">user_dim: dau
+date_range: 2026-04-29 ~ 2026-05-05</div>
+        <div class="tool-args-toggle">查看完整参数 ▾</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Calling 完成 -->
+  <div class="msg agent">
+    <div class="avatar t">⚡</div>
+    <div class="bubble-wrap">
+      <div class="tool-card">
+        <div class="tool-head">
+          <span class="ico">✅</span><span class="name">已执行 · SQL 查询</span>
+          <span class="duration">1.2s</span>
+        </div>
+        <div class="tool-args">SELECT user_dim, retention_d7 FROM ...</div>
+        <div class="tool-result">返回 14 行数据</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Calling 失败示例 (D39) -->
+  <div class="msg agent">
+    <div class="avatar t">⚡</div>
+    <div class="bubble-wrap">
+      <div class="tool-card error">
+        <div class="tool-head"><span class="ico">❌</span><span class="name">执行失败 · 显著性检验</span></div>
+        <div class="tool-result fail">连接超时，请重试</div>
+        <div class="tool-error-code">error_code: KYUUBI_CONNECTION_TIMEOUT</div>
+        <div class="tool-fail-actions">
+          <button>🔁 重试</button>
+          <button>📋 复制错误</button>
+          <button>🚩 反馈</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent 完整回复（含 Markdown 渲染演示 D37） -->
+  <div class="msg agent">
+    <div class="avatar a">📈</div>
+    <div class="bubble-wrap">
+      <div class="bubble">
+        <h3>v2.4 版本留存分析结果</h3>
+        <p>基于 7 天数据，<strong>新版本留存提升显著</strong>：</p>
+        <ul>
+          <li>新用户 D7 留存：<code>32.5%</code> → <code>38.1%</code>（+5.6pp）</li>
+          <li>老用户 D7 留存：<code>61.8%</code> → <code>64.3%</code>（+2.5pp）</li>
+          <li>整体加权：提升 <strong>+4.2%</strong></li>
+        </ul>
+
+        <p>关键查询语句：</p>
+        <pre><span class="lang-tag">sql</span><button class="copy-btn">📋 复制</button><code>SELECT
+  CASE WHEN reg_date &gt;= '2026-04-29' THEN 'new' ELSE 'old' END user_dim,
+  AVG(retention_d7) AS avg_retention
+FROM user_metrics
+WHERE date BETWEEN '2026-04-29' AND '2026-05-05'
+GROUP BY user_dim;</code></pre>
+
+        <!-- 内联图表 -->
+        <div class="chart-placeholder">
+          <div class="chart-title">D7 留存对比（绿色=v2.4，淡色=v2.3）</div>
+          <div class="chart-bars">
+            <span style="height:50%;opacity:.4"></span><span style="height:62%"></span>
+            <span style="height:75%;opacity:.4"></span><span style="height:82%"></span>
+            <span style="height:55%;opacity:.4"></span><span style="height:68%"></span>
+            <span style="height:78%;opacity:.4"></span><span style="height:85%"></span>
+          </div>
+        </div>
+
+        <p style="margin-top:12px"><strong>建议</strong>：进一步排查老用户提升较少的原因，可能与...</p>
+      </div>
+
+      <!-- 引用来源 默认展开第 1 条 (D49) -->
+      <div class="citations expanded">
+        <div class="cite-toggle">📎 引用来源 (3)<span style="margin-left:auto;color:var(--primary)">全部展开 ▾</span></div>
+        <div class="cite-item">
+          <div class="title">📘 数据分析方法论 · 留存计算口径</div>
+          <div class="snippet">D7 留存定义为：第 N 天活跃用户中，第 N+7 天仍活跃的比例...</div>
+        </div>
+        <div class="cite-item collapsed">
+          <div class="title">📘 指标口径字典 · DAU 定义</div>
+          <div class="snippet">DAU 计算去重 user_id，时间窗口为自然日 00:00-24:00...</div>
+        </div>
+        <div class="cite-item collapsed">
+          <div class="title">📘 AB 实验规范 · 显著性检验</div>
+          <div class="snippet">使用 Welch t-test，p < 0.05 视为显著...</div>
+        </div>
+      </div>
+
+      <!-- 反馈条 hover 显示 (D47-D48) -->
+      <div class="feedback">
+        <button title="有帮助">👍</button>
+        <button title="不准确">👎</button>
+        <button title="沉淀为经验">✨</button>
+      </div>
+
+      <!-- 推荐追问 (D49 emoji 区分) -->
+      <div class="followups">
+        <span class="followup-label">💡 推荐追问</span>
+        <button class="followup-btn">老用户提升少的原因？</button>
+        <button class="followup-btn">分渠道对比留存</button>
+        <button class="followup-btn">对收入影响测算</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typing 中 -->
+  <div class="msg agent">
+    <div class="avatar a">📈</div>
+    <div class="bubble-wrap">
+      <div class="typing">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 输入区 -->
+<div class="input-area">
+  <div class="refs-bar">
+    <span class="refs-count">已引用 4/10</span>
+    <span class="ref-tag file">📄 留存数据.csv <span class="x">×</span></span>
+    <span class="ref-tag file">📄 上周报告.md <span class="x">×</span></span>
+    <span class="ref-tag skill">⚡ 显著性检验 <span class="x">×</span></span>
+    <span class="ref-tag kb">📚 留存计算口径 <span class="x">×</span></span>
+  </div>
+  <div class="input-box">
+    <div class="input-row">
+      <textarea placeholder="例如：分析上周经营指标的关键变化与归因..."></textarea>
+      <span class="model">Claude Opus 4.7 ▾</span>
+    </div>
+    <div class="input-actions">
+      <button title="引用文件">📄</button>
+      <button title="引用技能">⚡</button>
+      <button title="上传文件">📎</button>
+      <button class="pause" id="pauseBtn" title="暂停生成（流式输出中显示）">⏸ 暂停生成</button>
+    </div>
+  </div>
+  <div class="input-hint">
+    <span><kbd style="background:var(--surface-3);padding:1px 4px;border-radius:3px;font-size:10px;font-family:monospace">Enter</kbd> 发送</span>
+    <span><kbd style="background:var(--surface-3);padding:1px 4px;border-radius:3px;font-size:10px;font-family:monospace">Shift+Enter</kbd> 换行</span>
+  </div>
+</div>
+</body>
+</html>

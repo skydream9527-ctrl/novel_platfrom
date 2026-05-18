@@ -1,0 +1,89 @@
+dimensions:
+  - name: 浏览器主端
+  - name: 浏览器信息流
+  - name: 内容中心
+
+categories:
+  - name: 规模指标
+    metrics:
+      - name: 浏览器DAU/日活
+        type: continuous
+        description: 日活跃用户数
+        dimension: 浏览器主端
+        sql_ref: browser_main.yaml#规模指标.浏览器DAU/日活
+      - name: 浏览器信息流DAU/日活
+        type: continuous
+        description: 信息流有曝光行为的用户数
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#规模指标.浏览器信息流DAU/日活
+      - name: 浏览器信息流消费DAU/日活
+        type: continuous
+        description: 信息流有实际内容消费的用户数
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#规模指标.浏览器信息流消费DAU/日活
+      - name: 浏览器信息流次日留存率
+        type: ratio
+        description: 信息流用户次日回访比例
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#留存与LT指标.浏览器信息流次日留存率
+
+  - name: 消费指标
+    metrics:
+      - name: 浏览器信息流人均时长
+        type: continuous
+        description: 信息流用户平均停留时长（分钟）
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#消费指标.浏览器信息流人均时长
+      - name: 浏览器信息流人均消费时长
+        type: continuous
+        description: 信息流用户平均内容消费时长（分钟）
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#消费指标.浏览器信息流人均消费时长
+      - name: 浏览器信息流人均VV
+        type: continuous
+        description: 信息流用户人均视频播放次数
+        dimension: 浏览器信息流
+        sql_ref: browser_feed.yaml#消费指标.浏览器信息流人均VV
+
+  - name: 收入指标
+    metrics: []
+    note: 暂无对应SQL查询模板，后续补充
+
+  - name: 待补充指标
+    metrics:
+      - name: 信息流有效用户
+        type: continuous
+        description: 信息流有效消费用户数（独立概念，与消费用户不合并）
+        dimension: 浏览器信息流
+        sql_ref: null
+        note: 当前SQL模板无对应查询，需后续补SQL
+    note: 概念已定义但SQL模板尚未覆盖的指标
+
+rules:
+  allow_directions:
+    - 正向
+    - 平稳
+  tradeoff_requires_human: true
+  tradeoff_evaluation_dimensions:
+    - 下降指标的严重程度
+    - 提升指标的业务价值
+    - 长期影响
+  significance_is_reference_only: true
+  significance_level: 0.05
+
+changelog:
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，基于SOP定义核心指标集合（规模5项+消费3项+收入6项）
+  - date: "2026-05-07"
+    author: AI
+    action: major_update
+    description: |
+      与sql_templates对齐重构：
+      - 维度拆分：浏览器→浏览器主端+浏览器信息流+内容中心
+      - 指标名统一：以sql_templates唯一名称为准（7条映射）
+      - 新增sql_ref字段：指向SQL模板文件+类别+指标名
+      - 新增dimension字段：标注指标所属维度
+      - 收入指标置空：暂无SQL模板，后续补充
+      - 信息流有效用户保留定义但标记sql_ref=null

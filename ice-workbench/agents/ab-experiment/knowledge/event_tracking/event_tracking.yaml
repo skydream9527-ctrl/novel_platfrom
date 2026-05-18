@@ -1,0 +1,127 @@
+# event_tracking.yaml
+# 埋点事件知识库 - 索引文件
+# 完整数据存储在 event_tracking.db (SQLite数据库)
+# 使用 import_event_tracking.py 从Excel导入/更新数据
+#
+# 查询方式：
+#   sqlite3 knowledge/event_tracking.db "SQL语句"
+#
+# 常用查询示例：
+#   1. 按指标查事件：
+#      SELECT e.name, e.name_cn FROM events e
+#      JOIN event_relations r ON e.id=r.event_id
+#      WHERE r.relation_type='metric' AND r.relation_name='浏览器信息流人均时长';
+#
+#   2. 按页面查事件：
+#      SELECT e.name, e.name_cn FROM events e
+#      JOIN event_relations r ON e.id=r.event_id
+#      WHERE r.relation_type='page' AND r.relation_name='沉浸式详情页';
+#
+#   3. 按字段查事件：
+#      SELECT DISTINCT e.name, e.name_cn FROM events e
+#      JOIN event_fields f ON e.id=f.event_id
+#      WHERE f.name='duration';
+#
+#   4. 查事件完整信息（字段+关联+公共参数）：
+#      SELECT * FROM event_fields WHERE event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#      SELECT * FROM event_relations WHERE event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#      SELECT cf.* FROM common_fields cf JOIN event_common_field_refs r ON cf.group_id=r.group_id
+#      WHERE r.event_id=(SELECT id FROM events WHERE name='content_item_expose');
+#
+#   5. 查看所有事件分类统计：
+#      SELECT category, COUNT(*) FROM events GROUP BY category;
+
+data_source: event_tracking.db
+data_format: sqlite3
+import_script: import_event_tracking.py
+source_file: "内容中心onetrack埋点(三期)  带沉浸式.xlsx"
+
+experiment_id_fields:
+  - name: eid
+    type: string
+    description: 旧实验id（公共参数）
+    location: common_fields表
+  - name: new_eid
+    type: string
+    description: 新实验id（服务端下发，公共参数）
+    location: common_fields表
+  - name: ad_exp_id
+    type: string
+    description: 广告实验id（广告事件特有字段）
+    location: event_fields表
+
+schema:
+  tables:
+    - name: common_field_groups
+      description: 公共字段组（预置参数/公共参数/信息流公共参数）
+    - name: common_fields
+      description: 公共字段定义，关联common_field_groups
+    - name: events
+      description: 事件定义（122个事件，12个分类）
+    - name: event_fields
+      description: 事件特有字段，关联events
+    - name: event_relations
+      description: 事件与指标/页面的关联关系
+    - name: event_common_field_refs
+      description: 事件引用的公共字段组
+
+stats:
+  total_events: 122
+  total_event_fields: 879
+  total_common_fields: 97
+  total_common_field_groups: 3
+  total_relations: 216
+  categories:
+    - name: content
+      count: 33
+      description: 内容相关事件（曝光/点击/浏览/播放/互动）
+    - name: app
+      count: 24
+      description: app通用事件（打开/退出/弹窗/引导）
+    - name: search
+      count: 15
+      description: 搜索事件
+    - name: skit
+      count: 8
+      description: 短剧事件
+    - name: operation
+      count: 10
+      description: 运营位事件
+    - name: ad
+      count: 9
+      description: 广告事件
+    - name: livestream
+      count: 9
+      description: 直播间事件
+    - name: incentive
+      count: 6
+      description: 激励体系事件
+    - name: exception
+      count: 3
+      description: 异常事件
+    - name: me
+      count: 2
+      description: 我的页面事件
+    - name: tab
+      count: 2
+      description: tab标签事件
+    - name: growth
+      count: 1
+      description: 拉新拉活事件
+
+changelog:
+  - date: "2026-05-08"
+    author: AI
+    action: major_update
+    description: |
+      从YAML迁移到SQLite数据库存储：
+      - 新增event_tracking.db（SQLite数据库）
+      - 5张核心表：events/event_fields/event_relations/common_fields/common_field_groups
+      - 从Excel导入130个事件、896个事件字段、97个公共字段
+      - 补充216条事件与指标/页面的关联关系
+      - experiment_id字段标注：eid/new_eid/ad_exp_id
+      - YAML文件保留为索引文件，指向数据库
+  - date: "2026-04-28"
+    author: AI
+    action: create
+    description: 初始创建，空模板，待用户补充埋点事件数据

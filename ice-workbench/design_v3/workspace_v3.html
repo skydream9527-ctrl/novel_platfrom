@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<title>ICE Workbench · Workspace 整体 (v3)</title>
+<!-- 对应决策：D28-D36 · 顶栏统一 + Agent 抽屉 + 4 Tab 右栏 -->
+<style>
+:root[data-theme="dark"]{
+  --bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-ab:#7bafd4;--p-data:#6baa8e;--p-wave:#c97b7b;--p-gray:#9b8ec4;
+  --success:#5bb98c;--warning:#d4a34e;--error:#c97b7b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100vh;background:var(--bg);color:var(--text);
+  font-family:'DM Sans','Microsoft YaHei',sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* TopNav workspace mode + Agent 抽屉 (D28-D30) */
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px}
+.back-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;border-radius:7px;cursor:pointer;font-size:14px}
+.agent-tab{display:flex;align-items:center;gap:8px;padding:6px 12px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;flex:1;max-width:560px}
+.agent-avatar{width:24px;height:24px;border-radius:50%;background:var(--p-biz-dim);
+  color:var(--p-biz);display:flex;align-items:center;justify-content:center;font-size:13px}
+.task-name{font-weight:600;font-size:14px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--success);
+  display:inline-block;animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.agent-name{color:var(--text-dim);font-size:13px}
+.paradigm-tag{padding:2px 8px;border-radius:4px;font-size:11px;
+  background:var(--p-biz-dim);color:var(--p-biz)}
+.chevron{margin-left:auto;color:var(--text-muted);transition:transform .2s}
+.agent-tab.open .chevron{transform:rotate(180deg)}
+.actions{display:flex;gap:6px}
+.action-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit}
+.action-btn:hover{border-color:var(--primary);color:var(--primary)}
+.icon-btn{background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  width:32px;height:32px;border-radius:6px;font-size:14px;position:relative}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.icon-btn .badge{position:absolute;top:5px;right:5px;background:var(--error);
+  color:#fff;font-size:9px;padding:1px 4px;border-radius:6px}
+
+/* Agent 抽屉展开态 (D28) */
+.agent-drawer{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 20px;display:none;align-items:center;gap:12px;font-size:12px;color:var(--text-dim);
+  animation:slideDown .25s ease}
+.agent-drawer.open{display:flex}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.agent-drawer .label{color:var(--text-muted)}
+.skill-chip{padding:2px 7px;background:var(--primary-dim);color:var(--primary);
+  border-radius:4px;font-size:11px}
+
+/* 三栏 */
+.workspace{flex:1;display:grid;grid-template-columns:280px 1fr 320px;overflow:hidden}
+@media(max-width:1100px){.workspace{grid-template-columns:280px 1fr 0}.right-panel{display:none}}
+@media(max-width:800px){.workspace{grid-template-columns:0 1fr 0}.sidebar,.right-panel{display:none}}
+
+/* 侧栏 (D31-D32 · 文件上传统一) */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;padding:14px}
+.sb-section{margin-bottom:18px}
+.sb-title{display:flex;align-items:center;gap:6px;margin-bottom:8px;
+  color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.sb-title .count{background:var(--surface-2);padding:1px 6px;border-radius:8px;font-size:10px}
+.sb-title .add-btn{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-dim);width:22px;height:22px;border-radius:5px;cursor:pointer;font-size:14px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;
+  cursor:pointer;font-size:13px;color:var(--text-dim);transition:all .15s}
+.sb-item:hover{background:var(--surface-2);color:var(--text)}
+.sb-item .ico{font-size:14px;width:18px;text-align:center}
+.sb-item .tag{margin-left:auto;font-size:10px;color:var(--text-muted);padding:1px 5px;
+  background:var(--surface-2);border-radius:3px}
+.sb-item .badge-local{font-size:9px;padding:1px 4px;background:var(--agent-dim);color:var(--agent);border-radius:3px}
+.sb-item .del{margin-left:6px;width:18px;height:18px;border-radius:3px;background:transparent;
+  border:none;color:var(--text-muted);cursor:pointer;font-size:12px;display:none}
+.sb-item:hover .del{display:inline-block}
+.sb-item .del:hover{color:var(--error);background:rgba(201,123,123,.15)}
+.sb-folder{padding:5px 8px;color:var(--text-muted);font-size:11px}
+
+/* 聊天区简化（详细对话见 chat_v3） */
+.chat-area{display:flex;flex-direction:column;background:var(--bg)}
+.chat-header{padding:10px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;font-size:12px}
+.model-selector{background:var(--surface-2);border:1px solid var(--border);
+  padding:4px 10px;border-radius:6px;color:var(--text);cursor:pointer;font-size:12px}
+.chat-actions{margin-left:auto;display:flex;gap:6px}
+.chat-actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px}
+.chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.placeholder{color:var(--text-muted);text-align:center;margin-top:80px;font-size:13px}
+.placeholder a{color:var(--primary)}
+.chat-input{padding:14px;border-top:1px solid var(--border);background:var(--surface)}
+.input-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.input-box textarea{width:100%;background:transparent;border:none;color:var(--text);
+  resize:none;font-family:inherit;font-size:13px;outline:none;min-height:22px}
+.input-actions{display:flex;align-items:center;gap:6px;margin-top:6px}
+.input-actions button{background:transparent;border:none;color:var(--text-dim);
+  width:28px;height:28px;border-radius:5px;cursor:pointer}
+.input-actions .send{margin-left:auto;background:var(--primary);color:#1a1a1a;width:auto;padding:6px 14px;font-weight:600}
+.input-hint{font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;gap:14px}
+
+/* 右栏 4 Tab (D33) */
+.right-panel{background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 8px}
+.tab{padding:10px 12px;cursor:pointer;font-size:12px;color:var(--text-dim);
+  border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-content{flex:1;overflow-y:auto;padding:14px}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid var(--border);font-size:12px}
+.info-label{color:var(--text-muted)}
+.collab-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.collab-avatar{width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary),var(--agent));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.collab-info{flex:1;font-size:12px}
+.collab-info .name{font-weight:500}
+.collab-info .role{color:var(--text-muted);font-size:10px}
+.collab-perm{font-size:10px;padding:2px 6px;background:var(--success);color:#fff;border-radius:3px}
+</style>
+</head>
+<body>
+<!-- TopNav workspace mode (D28-D30) -->
+<nav class="topnav">
+  <button class="back-btn">←</button>
+  <div class="agent-tab" id="agentTab" onclick="this.classList.toggle('open')">
+    <span class="agent-avatar">📈</span>
+    <span class="task-name">Q2 经营复盘分析</span>
+    <span style="color:var(--text-muted)">·</span>
+    <span class="agent-name">经营洞察 Agent</span>
+    <span class="dot"></span>
+    <span class="paradigm-tag">经营分析</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="actions">
+    <button class="action-btn">📤 导出</button>
+    <button class="action-btn">🔗 分享</button>
+    <button class="action-btn">⚙ 设置</button>
+    <button class="icon-btn">🌓</button>
+    <button class="icon-btn">🔔<span class="badge">3</span></button>
+  </div>
+</nav>
+
+<!-- Agent 抽屉展开态 (D28) -->
+<div class="agent-drawer" id="agentDrawer">
+  <span class="label">Skills:</span>
+  <span class="skill-chip">指标拆解</span>
+  <span class="skill-chip">趋势分析</span>
+  <span class="skill-chip">归因分析</span>
+  <span class="skill-chip">报告生成</span>
+  <span style="margin:0 10px;color:var(--border)">│</span>
+  <span><strong style="color:var(--text)">12</strong> 经验</span>
+  <span><strong style="color:var(--text)">96%</strong> 满意度</span>
+  <a href="#" style="color:var(--primary);margin-left:auto;font-size:12px">→ Agent 详情</a>
+</div>
+
+<div class="workspace">
+  <!-- 侧栏 -->
+  <aside class="sidebar">
+    <!-- Skills -->
+    <div class="sb-section">
+      <div class="sb-title">Skills <span class="count">4</span></div>
+      <div class="sb-item"><span class="ico">🔍</span>指标拆解<span class="tag">分析</span></div>
+      <div class="sb-item"><span class="ico">📊</span>趋势分析<span class="tag">分析</span></div>
+      <div class="sb-item"><span class="ico">🎯</span>归因分析<span class="tag">分析</span><span class="badge-local">本地</span></div>
+      <div class="sb-item"><span class="ico">📝</span>报告生成<span class="tag">输出</span></div>
+    </div>
+
+    <!-- Files -->
+    <div class="sb-section">
+      <div class="sb-title">Files <span class="count">5</span><button class="add-btn">+</button></div>
+      <div class="sb-folder">▼ 工作产出</div>
+      <div class="sb-item"><span class="ico" style="color:var(--p-ab)">📝</span>Q2 经营报告.md<button class="del">×</button></div>
+      <div class="sb-item"><span class="ico" style="color:var(--p-biz)">🌐</span>留存对比.html<button class="del">×</button></div>
+      <div class="sb-folder">▼ 需求输入</div>
+      <div class="sb-item"><span class="ico" style="color:var(--p-data)">📊</span>原始数据.csv<button class="del">×</button></div>
+      <div class="sb-folder">▼ 公共文件 <span style="color:var(--text-muted);font-size:9px">(防误删 D53)</span></div>
+      <div class="sb-item"><span class="ico">📝</span>使用指南.md</div>
+      <div class="sb-item"><span class="ico">📝</span>AB实验规范.md</div>
+    </div>
+
+    <!-- 知识库 (D54-D58 合并) -->
+    <div class="sb-section">
+      <div class="sb-title">📚 知识库 <span class="count">2</span></div>
+      <div class="sb-item"><span class="ico">📖</span>飞书·产品 KB<span class="tag" style="color:var(--success)">↻</span></div>
+      <div class="sb-item"><span class="ico">🧠</span>Mify·数据规范<span class="tag" style="color:var(--success)">↻</span></div>
+    </div>
+  </aside>
+
+  <!-- 聊天区（占位，详见 chat_v3） -->
+  <main class="chat-area">
+    <div class="chat-header">
+      <span class="model-selector">Claude Opus 4.7 ▾</span>
+      <div class="chat-actions">
+        <button>💾 导出对话</button>
+        <button>🗑 清空</button>
+      </div>
+    </div>
+    <div class="chat-messages">
+      <p class="placeholder">
+        🪶 这是 Workspace 整体布局演示<br/>
+        对话区详细演示见 <a href="workspace_chat_v3.html">workspace_chat_v3.html</a><br/>
+        文件区详细演示见 <a href="workspace_files_v3.html">workspace_files_v3.html</a>
+      </p>
+    </div>
+    <div class="chat-input">
+      <div class="input-box">
+        <textarea placeholder="例如：分析上周经营指标的关键变化与归因..."></textarea>
+        <div class="input-actions">
+          <button title="引用文件 / 知识库">📄</button>
+          <button title="引用技能">⚡</button>
+          <button title="上传文件">📎</button>
+          <span class="model-selector" style="margin-left:auto">Claude Opus 4.7 ▾</span>
+          <button class="send">▶ 发送</button>
+        </div>
+      </div>
+      <div class="input-hint">
+        <span><kbd style="background:var(--surface-3);padding:1px 4px;border-radius:3px;font-size:10px;font-family:monospace">Enter</kbd> 发送</span>
+        <span><kbd style="background:var(--surface-3);padding:1px 4px;border-radius:3px;font-size:10px;font-family:monospace">Shift+Enter</kbd> 换行</span>
+        <span style="margin-left:auto;color:var(--text-muted)">已引用 0/10</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右栏 · 4 Tab (D33) -->
+  <aside class="right-panel">
+    <div class="tabs">
+      <div class="tab">📄 文件</div>
+      <div class="tab active">⚙ 配置</div>
+      <div class="tab">🤖 Agent</div>
+      <div class="tab">👥 协作</div>
+    </div>
+    <div class="tab-content">
+      <h3 style="font-family:'Sora',sans-serif;font-size:14px;margin:0 0 14px;color:var(--text-dim)">任务配置</h3>
+      <div class="info-row"><span class="info-label">范式</span><span>经营分析</span></div>
+      <div class="info-row"><span class="info-label">状态</span><span style="color:var(--success)">● 进行中</span></div>
+      <div class="info-row"><span class="info-label">当前模型</span><span>Claude Opus 4.7</span></div>
+      <div class="info-row"><span class="info-label">创建时间</span><span>2026-04-22</span></div>
+      <div class="info-row"><span class="info-label">所有者</span><span>张明远</span></div>
+
+      <h3 style="font-family:'Sora',sans-serif;font-size:14px;margin:20px 0 10px;color:var(--text-dim)">协作者</h3>
+      <div class="collab-item">
+        <div class="collab-avatar">张</div>
+        <div class="collab-info"><div class="name">张明远</div><div class="role">创建者</div></div>
+        <span class="collab-perm">所有者</span>
+      </div>
+      <div class="collab-item">
+        <div class="collab-avatar" style="background:linear-gradient(135deg,var(--p-data),var(--p-biz))">李</div>
+        <div class="collab-info"><div class="name">李思涵</div><div class="role">数据分析师</div></div>
+        <span class="collab-perm">协作</span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+function toggleTheme(){
+  const html=document.documentElement;html.dataset.theme=html.dataset.theme==='dark'?'light':'dark';
+}
+document.getElementById('agentTab').addEventListener('click',()=>{
+  document.getElementById('agentDrawer').classList.toggle('open');
+});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',e=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+}));
+</script>
+</body>
+</html>

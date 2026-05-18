@@ -1,0 +1,59 @@
+matrix:
+  - id: dm_001
+    core_metrics: 全部正向
+    direct_metrics: 符合预期
+    decision: 放量
+    requires_human: false
+    confidence: high
+    description: 核心指标全部正向且直接指标符合预期，建议放量
+
+  - id: dm_002
+    core_metrics: 部分正向+部分平稳
+    direct_metrics: 符合预期
+    decision: 放量
+    requires_human: false
+    confidence: high
+    description: 核心指标部分正向部分平稳且直接指标符合预期，建议放量
+
+  - id: dm_003
+    core_metrics: 此消彼长
+    direct_metrics: any
+    decision: 人工决策
+    requires_human: true
+    confidence: none
+    description: 核心指标此消彼长，须人工评估
+    evaluation_dimensions:
+      - 下降指标的严重程度
+      - 提升指标的业务价值
+      - 长期影响
+    decision_makers:
+      - 产品经理
+      - 数据分析师
+
+  - id: dm_004
+    core_metrics: 出现下降
+    direct_metrics: any
+    decision: 下钻分析，暂不放量
+    requires_human: false
+    confidence: low
+    description: 核心指标出现下降，需下钻分析原因
+
+  - id: dm_005
+    core_metrics: any
+    direct_metrics: 不符合预期
+    decision: 下钻分析，暂不放量
+    requires_human: false
+    confidence: low
+    description: 直接指标不符合预期，需下钻分析原因
+
+direction_definitions:
+  正向: 实验组指标显著优于对照组
+  平稳: 实验组与对照组无显著差异
+  下降: 实验组指标显著劣于对照组
+  此消彼长: 部分核心指标正向，部分核心指标下降
+
+changelog:
+  - date: "2026-04-26"
+    author: AI
+    action: create
+    description: 初始创建，基于SOP定义5种决策组合及方向定义

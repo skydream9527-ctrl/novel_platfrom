@@ -1,0 +1,37 @@
+topics:
+  - name: AI Agents
+    status: active
+    priority: high
+    questions:
+      - 当前主流 Agent 架构有哪些差异
+      - 什么场景适合 workflow，什么场景适合 autonomous agent
+      - 多 Agent 是否真的值得引入
+
+  - name: RAG
+    status: active
+    priority: high
+    questions:
+      - 检索方案如何选型
+      - chunking 和 reranking 的最新最佳实践是什么
+      - 什么情况下不应该用 RAG
+
+  - name: Evaluation
+    status: active
+    priority: medium
+    questions:
+      - 如何评估 Agent 质量
+      - 如何构建简单可维护的 eval 体系
+
+  - name: MCP and Tool Use
+    status: active
+    priority: high
+    questions:
+      - MCP 在真实系统中的价值边界是什么
+      - tool calling 的可靠设计模式有哪些
+
+  - name: AI Tooling
+    status: active
+    priority: medium
+    questions:
+      - 哪些工具值得长期跟踪
+      - 哪些工具只是短期热点

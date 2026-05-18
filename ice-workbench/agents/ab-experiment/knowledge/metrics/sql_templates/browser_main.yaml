@@ -1,0 +1,693 @@
+dimension: 浏览器主端
+source_table: iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+ad_table: iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+
+规模指标:
+  - name: 浏览器DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+      GROUP BY date
+
+  - name: 浏览器分新老用户DAU/日活
+    sql: |
+      SELECT  date,
+              CASE WHEN is_new_2024=1 THEN 'new'
+                   WHEN is_new_2024=0 THEN 'old'
+              END as is_new_user,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+      GROUP BY date,
+               CASE WHEN is_new_2024=1 THEN 'new'
+                    WHEN is_new_2024=0 THEN 'old'
+               END
+    drill_dimension: is_new_user
+
+  - name: 浏览器MAU/月活
+    sql: |
+      SELECT  count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date BETWEEN ${date-30} AND ${date-1}
+              and is_app_dau_2024=1
+
+  - name: 浏览器主启DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and app_launch_way='点击icon'
+              and app_open_cnt+app_duration_cnt>0
+      GROUP BY date
+
+  - name: 浏览器主启MAU/月活
+    sql: |
+      SELECT  count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date BETWEEN ${date-30} AND ${date-1}
+              and app_launch_way='点击icon'
+              and app_open_cnt+app_duration_cnt>0
+
+  - name: 浏览器有效DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way<>'第三方调起'
+              and app_open_cnt>0
+      GROUP BY date
+
+  - name: 浏览器PUSH DAU/日活
+    sql: |
+      SELECT  count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date = ${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way like '%push%'
+
+  - name: 浏览器分启动方式DAU/日活
+    sql: |
+      SELECT  date, app_launch_way,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, app_launch_way
+    drill_dimension: app_launch_way
+
+  - name: 浏览器内容中心调起DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and app_launch_way like '%newhome%'
+      GROUP BY date
+
+  - name: 浏览器三方调起DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way='第三方调起'
+              and app_open_cnt>0
+      GROUP BY date
+
+  - name: 浏览器三方调起分调起包名DAU/日活
+    sql: |
+      SELECT  date, properties.third_packagename,
+              count(distinct distinct_id) uv
+      FROM    iceberg_zjyprc_hadoop.dw.dwd_ot_event_di_31000000442
+      WHERE   date=${date-1}
+              and event_name='app_open'
+      GROUP BY date, properties.third_packagename
+    drill_dimension: third_packagename
+
+消费指标:
+  - name: 浏览器人均使用时长
+    sql: |
+      SELECT  sum(app_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+
+  - name: 浏览器人均启动次数
+    sql: |
+      SELECT  sum(app_open_cnt)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+
+  - name: 浏览器人均主动启动次数
+    sql: |
+      SELECT  count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way <> '第三方调起'
+              and app_open_cnt>0
+
+  - name: 浏览器人均PUSH启动次数
+    sql: |
+      SELECT  sum(app_open_cnt)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date = ${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way like '%push%'
+
+  - name: 浏览器人均三方启动次数
+    sql: |
+      SELECT  sum(app_open_cnt)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date = ${date-1}
+              and is_app_dau_2024=1
+              and app_launch_way='第三方调起'
+
+  - name: 浏览器深度用户DAU
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM
+          (
+              SELECT  date, did,
+                      sum(app_dura)/60000 as app_dura
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date = ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          ) a
+      WHERE   app_dura>=20
+      GROUP BY date
+
+  - name: 浏览器中度用户DAU
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM
+          (
+              SELECT  date, did,
+                      sum(app_dura)/60000 as app_dura
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date = ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          ) a
+      WHERE   app_dura>=13 and app_dura<20
+      GROUP BY date
+
+  - name: 浏览器轻度用户DAU
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM
+          (
+              SELECT  date, did,
+                      sum(app_dura)/60000 as app_dura
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date = ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          ) a
+      WHERE   app_dura>=0 and app_dura<13
+      GROUP BY date
+
+收入指标:
+  - name: 浏览器ARPU
+    sql: |
+      SELECT  a.date,
+              sum(fee)/count(distinct a.did) arpu
+      FROM
+      (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )a
+      join
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date
+
+  - name: 浏览器分启动方式ARPU
+    sql: |
+      SELECT  a.date, a.app_launch_way,
+              sum(fee)/count(distinct a.did) arpu
+      FROM
+      (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did, app_launch_way
+      )a
+      join
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date, a.app_launch_way
+    drill_dimension: app_launch_way
+
+留存与LT指标:
+  - name: 浏览器次日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=1
+      GROUP BY a.date;
+
+  - name: 浏览器7日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=7
+      GROUP BY a.date;
+
+  - name: 浏览器30日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-60} and ${date-1}
+                      and is_app_dau_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=30
+      GROUP BY a.date;
+
+  - name: 浏览器主启次日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and app_launch_way='点击icon'
+                      and app_open_cnt+app_duration_cnt>0
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=1
+      GROUP BY a.date;
+
+  - name: 浏览器主启7日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and app_launch_way='点击icon'
+                      and app_open_cnt+app_duration_cnt>0
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=7
+      GROUP BY a.date;
+
+  - name: 浏览器主启30日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-60} and ${date-1}
+                      and app_launch_way='点击icon'
+                      and app_open_cnt+app_duration_cnt>0
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=30
+      GROUP BY a.date;
+
+  - name: 浏览器LT3
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=2
+      GROUP BY a.date
+
+  - name: 浏览器LT7
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=6
+      GROUP BY a.date
+
+  - name: 浏览器LT30
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=29
+      GROUP BY a.date
+
+  - name: 浏览器分启动方式LT3
+    sql: |
+      with t1 as (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did, app_launch_way
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date, app_launch_way,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did, app_launch_way
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=2
+      GROUP BY a.date, app_launch_way
+    drill_dimension: app_launch_way
+
+  - name: 浏览器分启动方式LT7
+    sql: |
+      with t1 as (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did, app_launch_way
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date, app_launch_way,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did, app_launch_way
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=6
+      GROUP BY a.date, app_launch_way
+    drill_dimension: app_launch_way
+
+  - name: 浏览器分启动方式LT30
+    sql: |
+      with t1 as (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did, app_launch_way
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date, app_launch_way,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did, app_launch_way
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=29
+      GROUP BY a.date, app_launch_way
+    drill_dimension: app_launch_way
+
+下钻维度:
+  - name: 浏览器分客户端版本DAU
+    sql: |
+      SELECT  date, app_ver,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, app_ver
+    drill_dimension: app_ver
+
+  - name: 浏览器分机型DAU
+    sql: |
+      SELECT  date, model,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, model
+    drill_dimension: model
+
+  - name: 浏览器分系统版本DAU
+    sql: |
+      SELECT  date, os_ver,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, os_ver
+    drill_dimension: os_ver
+
+  - name: 浏览器分MIUI版本DAU
+    sql: |
+      SELECT  date, miui,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, miui
+    drill_dimension: miui
+
+  - name: 浏览器分省份DAU
+    sql: |
+      SELECT  date, province,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, province
+    drill_dimension: province
+
+  - name: 浏览器分城市DAU
+    sql: |
+      SELECT  date, city,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE  is_app_dau_2024 = 1
+      GROUP BY date, city
+    drill_dimension: city
+
+  - name: 浏览器分广告位收入
+    sql: |
+      SELECT  date, tag_id,
+              sum(fee_amt)/100000 as fee
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+      WHERE   date=${date-1}
+      GROUP BY date, tag_id
+    drill_dimension: tag_id
+
+  - name: 浏览器分启动方式收入
+    sql: |
+      SELECT  a.date, app_launch_way, sum(fee) fee
+      FROM
+      (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_app_dau_2024=1
+          GROUP BY date, did, app_launch_way
+      )a
+      LEFT JOIN
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date, app_launch_way
+    drill_dimension: app_launch_way

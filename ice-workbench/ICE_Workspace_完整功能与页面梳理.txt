@@ -1,0 +1,770 @@
+==========================================================================
+ICE Data Workbench (ice_data_workspace_v2) — 完整功能与页面梳理
+==========================================================================
+来源：ice_data_workspace_v2.zip
+版本：PRD v3 (2026-05-06)
+梳理人：Claude (代码 + 文档双向核对)
+==========================================================================
+
+【0】产品一句话定位
+--------------------------------------------------------------------------
+面向互联网产品团队的"数据工作流工作台"，以 Web 应用形态运行，
+通过 Agent + 对话 + 工具调用驱动 AB 实验、经营分析、灰度监控、
+数据分析、波动归因等数据任务，并把团队知识、技能、模板沉淀为可复用资产。
+
+
+【1】整体架构
+--------------------------------------------------------------------------
+ice_data_workspace_v2/
+├── frontend/        React 19 + TypeScript + Vite + Zustand 单页应用
+├── server/          FastAPI + SQLAlchemy(asyncio) + SQLite
+├── agents/          5 个本地 Agent（Python 进程）+ 共享运行时
+│   ├── data_analysis/   数据分析 Agent (NL-SQL + 多专家辩论)
+│   ├── general_agent/   通用 Agent (集成所有能力)
+│   ├── know_agent/      知识库 Agent (飞书 + Mify RAG)
+│   ├── learn_agent/     学习 Agent (网页抓取/对比/沉淀)
+│   └── shared/          共享运行时(runtime/llm_client/memory/...)
+├── skills/          25 个本地 Skill 目录（自动发现）
+├── files/           4 篇公共参考文档（使用指南、AB 规范等）
+├── product_plan/    PRD v2/v3 + 13 个设计稿 HTML
+├── users_data/      SQLite 数据库 + 上传/导出/备份目录
+└── (运行时)
+    └── frontend/dist 构建产物 → 由 server 静态托管，实现单端口部署
+
+技术栈核心：
+  前端：React 19 / TypeScript / Vite / Zustand / Axios / react-markdown
+        / ECharts / react-router-dom v7 / CSS Modules + CSS Variables
+  后端：FastAPI / SQLAlchemy 2.0 异步 / aiosqlite / passlib(bcrypt)
+        / python-jose(JWT) / openai(SSE) / WebSocket
+  Agent：httpx SSE LLM 客户端 / 自研 ToolRegistry / Function Calling
+
+
+【2】角色体系
+--------------------------------------------------------------------------
+super_admin  系统配置、模型管理、admin 账号管理、删除用户、全部审计日志
+admin        用户管理(不含删除)、Agent/Skill 审核、经验卡片审批、
+             公共文件管理、公告、模板审核、公共任务审核
+user         创建任务、对话、上传文件、公共区浏览
+
+种子账号（密码均为 123456）：
+  admin                系统管理员 (auth_role=admin)
+  zhang@ice.dev        张明远 / 产品经理 / 增长团队
+  li@ice.dev           李思涵 / 数据分析师 / 商业化团队
+  wang@ice.dev         王子轩 / 研发工程师 / 基础架构
+
+
+【3】核心概念词典
+--------------------------------------------------------------------------
+任务 Task             一次数据工作流，每个任务拥有独立 Workspace
+工作空间 Workspace    任务的执行环境，包含 Agent、Skills、Files
+工作范式 Paradigm     5 种预置任务模板，每种绑定唯一 Agent + 技能集
+Agent                 公共能力实体，与范式 1:1 绑定，可对话进化
+Skill                 可执行工具，含 tool_schema，由 LLM function-calling 调用
+经验卡片 Experience   从对话中提炼的规则，审批后注入 Agent System Prompt
+Agent 记忆 Memory     对话沉淀的结构化记忆，多次验证后升级为经验卡片
+公共区 Commons        团队共享的 Agents / Skills / Files / 模板 / 任务
+
+
+【4】五大工作范式（与 Agent 1:1 绑定）
+--------------------------------------------------------------------------
+范式            色板     Agent           预置 Skills
+ab_test         雾蓝     实验分析 Agent  分流查询 / 指标计算 / 显著性检验 / 报告生成
+biz_analysis    暖金     经营洞察 Agent  指标拆解 / 趋势分析 / 归因分析 / 报告生成
+gray_release    淡紫     灰度监控 Agent  灰度指标查询 / 版本对比 / 质量评估 / 放量建议
+data_analysis   灰绿     数据分析 Agent  SQL查询 / 数据清洗 / 可视化 / 建模 / 报告生成
+wave_analysis   暗红     波动归因 Agent  异动检测 / 多维下钻 / 归因定位 / 影响评估
+(open)          —        通用 Agent      不绑定范式，开放任务专用
+
+
+==========================================================================
+【5】前端全部页面（路由 → 文件 → 功能）
+==========================================================================
+
+来源：frontend/src/App.tsx + 各页面 .tsx + .module.css
+
+──────────────────────────────────────────────────────────────────────────
+5.1 公开页（无需登录）
+──────────────────────────────────────────────────────────────────────────
+
+P1. 登录页  /login
+    文件: pages/LoginPage.tsx
+    功能:
+      - 账号密码登录
+      - 账号列表选择登录（无密码快捷登录，内网测试用）
+      - 自动重定向到 /dashboard（已登录）
+      - 暗色主题：网格漂移 + 光球浮动 + 径向遮罩
+      - 响应式：≤900px 双栏→单栏
+
+P2. 注册页  /register
+    文件: pages/RegisterPage.tsx
+    功能:
+      - 姓名 + 邮箱 + 密码注册
+      - 邮箱唯一校验
+      - 注册成功跳转 /login
+
+P3. 使用指南页  /guide
+    文件: pages/GuidePage.tsx
+    功能:
+      - 拉取 /api/v1/guide → 渲染 files/使用指南.md
+      - 公开访问，作为公共区置顶引导
+
+P4. 产品介绍页  /introduce
+    文件: pages/IntroducePage.tsx
+    功能:
+      - 产品营销页：核心价值、范式介绍、关键能力
+
+
+──────────────────────────────────────────────────────────────────────────
+5.2 主用户页（AuthGuard 守卫）
+──────────────────────────────────────────────────────────────────────────
+
+P5. Dashboard 首页  /dashboard
+    文件: pages/DashboardPage.tsx
+    功能（v3 三区同屏布局）:
+      ① 顶部 Global Bar (52px)
+         Logo / 全局搜索 ⌘K / 通知 Bell / 管理后台入口 / 主题切换 / 用户胶囊
+      ② 欢迎区 + 公告横幅 (info / warning / critical 三级)
+      ③ 个人统计卡片：环比指示器 + 7天 sparkline + vs 上周
+         (Platform 统计仅 admin 可见)
+      ④ 历史任务 Grid（卡片：范式色顶线 + 任务名 + meta）
+      ⑤ 创建新任务区
+         · 5 种范式卡片（点击命名 → 创建 → 进入 Workspace）
+         · 1 种"开放任务"虚线卡片（选择 Agent → 创建）
+         · 使用模板创建（v2）
+      ⑥ 公共区
+         · 使用指南横幅（is_pinned 置顶）
+         · 公共 Agents / Skills / Files / 模板 4 个 Tab
+      ⑦ 在线知识库区（v3 新增）：飞书·产品知识库、Mify·数据规范
+      ⑧ 公共任务区（v3 新增）：3 列 Grid，meta 含创建者/复用次数/文件数
+
+P6. 创建任务页  /create-task
+    文件: pages/CreateTaskPage.tsx
+    功能:
+      - 详细表单创建任务（范式、Agent、模板、初始 Prompt、文件）
+      - 比 Dashboard 快捷创建更详尽
+
+P7. 工作空间页  /workspace/:taskId
+    文件: pages/WorkspacePage.tsx + 多个 components
+    布局: 三栏 = Sidebar 280px + Chat flex:1 + RightPanel 320px
+    顶部导航 (52px)：
+      ← 返回 + Agent 头像 + 任务名 · Agent 名 ●在线 + 模型切换 + 操作按钮
+      (v3 顶部 Agent 抽屉可展开显示 Skills 和经验数)
+    侧边栏 (Sidebar.tsx)：
+      v3 重构后包含三个 Section:
+      ▾ SKILLS  当前 Agent 绑定的技能列表
+      ▾ FILES   按 output / input 分组（md cyan / html amber / csv 等）
+      ▾ 知识库   飞书与 Mify 知识库目录树
+    聊天区 (ChatHeader / ChatMessages / ChatInput)：
+      消息流：
+        - 用户消息靠右暖橙渐变气泡 #c27040→#e8915a
+        - Agent 消息靠左暗色气泡 + Markdown + 代码高亮
+        - WebSocket 流式输出，逐字追加 + 闪烁竖线光标
+        - Typing 三点弹跳指示器
+        - Tool Calling 卡片：左边框 warning/success/error 状态
+        - 内联 ECharts 图表（Agent 返回 chart_config）
+        - 推荐追问 chips（agent 回答后 2-3 条）
+        - 消息反馈 👍/👎 + 沉淀为经验 💡
+      输入框：
+        - textarea 自适应高度
+        - Enter 发送 / Shift+Enter 换行
+        - 引用文件 📎 + 引用技能 ⚡ + 上传 📤 + 拖拽上传
+        - 已引用 Tag 行（可移除）
+        - 模型选择器（13+ LLM）
+    右侧面板 (RightPanel.tsx)：
+      多 Tab：文件预览 / 任务配置 / Agent 详情
+      文件预览：md 渲染 / html sandbox / csv 表格 / 大文件下载提示
+
+P8. Agent 详情页  /agent/:agentId
+    文件: pages/AgentDetailPage.tsx
+    功能:
+      - Agent 概览（图标、描述、范式、状态、统计）
+      - 绑定 Skills 列表
+      - 经验卡片列表
+      - 进化时间线
+      - 使用统计（对话数 / 满意度 / Tool 调用次数）
+
+P9. 定时任务页  /scheduled-tasks
+    文件: pages/ScheduledTasksPage.tsx
+    功能:
+      - 列出所有定时任务
+      - 频率配置（每日/每周/每月/cron）
+      - 暂停 / 恢复 / 删除
+      - 执行记录（scheduled_runs）
+      - 推送渠道（文件 / 飞书 / 邮件）
+
+
+──────────────────────────────────────────────────────────────────────────
+5.3 管理后台（AuthGuard + AdminGuard）
+──────────────────────────────────────────────────────────────────────────
+布局: layouts/AdminLayout.tsx
+  Global Bar 保留 + 左侧 Sidebar 220px + 内容区
+  Sidebar 导航 13 项（按访问频率排序）
+
+P10. 概览  /admin
+     文件: pages/admin/AdminDashboard.tsx
+     功能: 平台统计卡片 + 最新审计 + 最新用户
+
+P11. 用户管理  /admin/users
+     文件: pages/admin/AdminUsers.tsx
+     功能: 用户 CRUD + 角色分配 + 状态(active/disabled) + 重置密码
+
+P12. Agent 管理  /admin/agents
+     文件: pages/admin/AdminAgents.tsx
+     功能: Agent 列表 + 公共/私有 + 范式 + 审核(draft→published)
+
+P13. Agent 编辑  /admin/agents/:agentId/edit
+     文件: pages/admin/AdminAgentEdit.tsx
+     功能: System Prompt 编辑器 + Skills 绑定排序 + 测试对话(右栏)
+
+P14. Skill 管理  /admin/skills
+     文件: pages/admin/AdminSkills.tsx
+     功能: Skill 列表 + tool_schema JSON 编辑器 + tool_entry 配置
+            + local/managed 区分 + 启用/禁用 + 范式预装
+
+P15. 经验卡片管理  /admin/experience-cards
+     文件: pages/admin/AdminExperienceCards.tsx
+     功能: 按 Agent 分组 Tab + draft → approved 审核 + 删除
+
+P16. 用量统计  /admin/usage
+     文件: pages/admin/AdminUsageStats.tsx
+     功能: 概览 + 每日趋势 + 按模型聚合 + 按用户聚合
+
+P17. 知识库管理  /admin/knowledge-bases
+     文件: pages/admin/AdminKnowledgeBases.tsx
+     功能: 知识库 CRUD + 飞书 space_id 配置 + Mify dataset_id 配置
+            + 同步频率 + 手动同步触发 + 同步日志
+
+P18. 公共文件管理  /admin/files
+     文件: pages/admin/AdminFiles.tsx
+     功能: 公共文件 CRUD + 置顶(is_pinned) + 来源(feishu/mify_rag/local)
+            + 筛选 + 编辑 / 删除
+
+P19. 任务模板管理  /admin/templates
+     文件: pages/admin/AdminTemplates.tsx
+     功能: 模板审核(draft→approved) + 编辑 / 下架 + 创建官方模板
+
+P20. 公共任务管理  /admin/public-tasks
+     文件: pages/admin/AdminPublicTasks.tsx
+     功能: 用户提交"另存为公共任务"审核 → 已发布(在 Dashboard 公共区可见)
+
+P21. LLM 成本追踪  /admin/costs
+     文件: pages/admin/AdminCosts.tsx
+     功能: 按模型/用户/Agent 聚合 tokens 与花费 + 单价配置 + 趋势图
+
+P22. SQL 审计  /admin/sql-audit
+     文件: pages/admin/AdminSQLAudit.tsx
+     功能: SQL 执行日志 + 三级安全(allow/warn/block) + 按级别筛选
+
+P23. 系统配置  /admin/settings
+     文件: pages/admin/AdminSettings.tsx
+     功能: 模型管理 + 系统参数 + 公告 CRUD + 全局开关
+
+
+──────────────────────────────────────────────────────────────────────────
+5.4 全局组件清单（components/）
+──────────────────────────────────────────────────────────────────────────
+AdminGuard / AuthGuard       路由守卫
+AnnouncementBanner           顶部公告横幅
+WarningBanner                顶部 slideDown 警告条 (warning/error/info)
+NotificationCenter           🔔 通知中心 dropdown 380×480，按未读排序
+SearchModal                  ⌘K 全局搜索 600×500，分类(任务/Agent/Skill/文件/知识库)
+ModelSelector                LLM 模型切换器
+ChatHeader / ChatInput / ChatMessages   对话三件套
+ToolCallCard                 工具调用过程卡片（执行中/完成/失败/超时）
+SuggestedFollowups           推荐追问 chips
+InlineChart                  ECharts 内联图表
+ReportCard                   报告卡片
+FilePreview                  文件预览（md / html sandbox / csv 表格）
+KnowledgeBrowser             知识库目录树浏览器
+KnowledgeBaseCard            知识库卡片（Dashboard 在线知识库区）
+AgentConfigPanel / AgentDetailModal      Agent 配置弹窗
+SkillDetailModal             Skill 详情弹窗
+ExperienceCardModal          经验卡片审核弹窗
+ShareModal                   任务分享 / 协作者管理
+WorkspaceSettings            工作空间设置
+EmptyState                   引导型空状态
+Skeleton                     骨架屏 + shimmer
+Sparkline                    7 天柱状趋势条
+BgGrid                       网格漂移背景
+
+布局: AdminLayout / Sidebar / TopNav
+状态管理: stores/authStore.ts + stores/workspaceStore.ts (Zustand)
+Hooks: useTheme (亮/暗双模) + useWebSocket (自动重连 3s)
+
+
+==========================================================================
+【6】产品设计稿 HTML（product_plan/design/）
+==========================================================================
+全部 13 份，可在浏览器直接打开预览设计意图：
+
+dashboard_v2.html              Dashboard（暖色 + sparkline + 知识库 + 公共任务）
+login_v2.html                  登录页
+introduce_v2.html              产品介绍
+workspace_v2.html              工作空间三栏
+workspace_chat_v2.html         对话 + Tool Calling 状态
+workspace_files_v2.html        文件 + 知识库
+agent_detail_v2.html           Agent 详情
+create_task_v2.html            创建任务
+scheduled_task_v2.html         定时任务
+admin_dashboard_v2.html        管理后台总览（含公共任务管理）
+admin_agents_v2.html           Agent 管理
+states_demo.html               状态设计 (empty / loading / error / streaming)
+notification_center_demo.html  通知中心 + ⌘K 全局搜索
+
+PRD 文档: product_plan/plan/prd_v2.md (功能完整) + prd_v3.md (设计升级)
+
+
+==========================================================================
+【7】后端 API（FastAPI，前缀 /api/v1）
+==========================================================================
+来源：server/app/api/v1/*.py
+
+──────────────────────────────────────────────────────────────────────────
+7.1 公共端点
+──────────────────────────────────────────────────────────────────────────
+GET  /api/v1/health                       健康检查
+GET  /api/v1/guide                        使用指南 markdown
+GET  /api/v1/announcements/active         公告列表（公开）
+
+──────────────────────────────────────────────────────────────────────────
+7.2 认证 /auth
+──────────────────────────────────────────────────────────────────────────
+GET  /accounts                            账号列表（快捷登录）
+POST /login                               账号密码登录
+POST /login-by-account                    无密码快捷登录
+POST /refresh                             refresh_token 换 access_token
+GET  /me                                  当前用户信息
+POST /register                            注册
+
+──────────────────────────────────────────────────────────────────────────
+7.3 任务 /tasks
+──────────────────────────────────────────────────────────────────────────
+GET    /                                  我的任务列表
+POST   /                                  创建任务（同步创建 Workspace）
+GET    /shared/list                       协作任务
+GET    /{task_id}                         任务详情
+PATCH  /{task_id}                         更新（重命名 / 归档）
+DELETE /{task_id}                         删除
+GET    /{task_id}/collaborators           协作者列表
+POST   /{task_id}/collaborators           添加协作者
+DELETE /{task_id}/collaborators/{uid}     移除
+GET    /{task_id}/scheduled-tasks         定时任务列表
+POST   /{task_id}/scheduled-tasks         创建定时任务
+PATCH  /{task_id}/scheduled-tasks/{sid}   更新
+DELETE /{task_id}/scheduled-tasks/{sid}   删除
+POST   /{task_id}/share                   发布到公共任务（待审核）
+POST   /{task_id}/unshare                 撤回发布
+
+──────────────────────────────────────────────────────────────────────────
+7.4 工作空间 /workspaces
+──────────────────────────────────────────────────────────────────────────
+GET  /{wsid}                              工作空间状态恢复
+GET  /{wsid}/agents                       绑定 Agent 列表
+POST /{wsid}/agents                       添加 Agent
+POST /{wsid}/agents/create                创建私有 Agent
+PATCH /{wsid}/agents/{aid}                修改 Agent 配置
+GET  /{wsid}/agents/{aid}/config          获取 Agent System Prompt
+GET  /{wsid}/skills                       Skill 列表
+POST /{wsid}/skills                       添加 Skill
+GET  /{wsid}/files                        文件列表
+POST /{wsid}/files                        新建文件
+POST /{wsid}/files/upload                 上传本地文件 (csv/md/txt/html/json/sql, 2MB)
+GET  /{wsid}/files/public                 公共文件
+GET  /{wsid}/knowledge-bases              工作空间可见知识库
+POST /{wsid}/knowledge-bases/query        RAG 查询
+GET  /{wsid}/knowledge-bases/{kbid}/documents          文档列表
+GET  /{wsid}/knowledge-bases/{kbid}/documents/{did}/content  文档正文
+GET  /{wsid}/knowledge-bases/{kbid}/tree  完整目录树
+POST /{wsid}/knowledge-bases/{kbid}/sync  手动触发同步
+
+──────────────────────────────────────────────────────────────────────────
+7.5 文件 /files
+──────────────────────────────────────────────────────────────────────────
+GET    /{file_id}      获取（含正文）
+PUT    /{file_id}      更新
+DELETE /{file_id}      软删除
+POST   /{file_id}/share 设置公共/私有
+
+──────────────────────────────────────────────────────────────────────────
+7.6 对话 /conversations
+──────────────────────────────────────────────────────────────────────────
+GET  /{cid}/messages                                  消息历史(游标分页)
+POST /messages/{mid}/feedback                         消息反馈 👍/👎
+POST /messages/{mid}/extract-experience               沉淀为经验卡片(LLM 提炼)
+
+──────────────────────────────────────────────────────────────────────────
+7.7 公共区 /commons
+──────────────────────────────────────────────────────────────────────────
+GET  /                  混合列表 (?type=agents/skills/files/templates/tasks)
+
+──────────────────────────────────────────────────────────────────────────
+7.8 Agent / Skill / 模型 / 搜索 / 统计
+──────────────────────────────────────────────────────────────────────────
+GET  /agents/public           公共 Agent 列表
+POST /agents/{aid}/share      发布为公共
+POST /skills/{sid}/share      Skill 发布
+GET  /models                  LLM 模型列表（前端模型切换器）
+GET  /search                  全局搜索（任务/Agent/Skill/文件/知识库）
+GET  /stats                   个人统计（环比 + sparkline）
+
+──────────────────────────────────────────────────────────────────────────
+7.9 本地资源 /local-agents · /local-skills
+──────────────────────────────────────────────────────────────────────────
+GET  /local-agents                列出 agents/ 目录下 5 个本地 Agent
+GET  /local-agents/{dir_name}     Agent 详情(prompt/skills/tools)
+GET  /local-skills                列出 skills/ 目录下 25 个 Skill
+GET  /local-skills/{dir_name}     Skill 详情(SKILL.md 解析)
+
+──────────────────────────────────────────────────────────────────────────
+7.10 WebSocket
+──────────────────────────────────────────────────────────────────────────
+WS   /api/v1/ws/conversations/{cid}
+事件协议:
+  ← user_message           前端发送（含 referenced_file_ids / referenced_skill_ids）
+  → user_message_ack       回执
+  → agent_typing           开始思考
+  → tool_call_start        工具调用开始 {tool_name, arguments_summary}
+  → tool_call_done         工具完成 {result_summary, chart_config?}
+  → agent_message          流式 chunk
+  → agent_message_done     回答结束
+  → file_created           Agent 产出文件
+  → suggested_followups    推荐追问
+约束:
+  Tool Calling 循环最多 5 轮
+  单 Tool 超时 30s
+  对话历史 context 20 条
+
+──────────────────────────────────────────────────────────────────────────
+7.11 管理后台 /admin
+──────────────────────────────────────────────────────────────────────────
+GET    /stats                                平台统计
+用户:    GET/POST /users  PATCH/DELETE /users/{uid}  POST /users/{uid}/reset-password
+Agent:  GET/POST /agents  PATCH/DELETE /agents/{aid}  POST /agents/{aid}/review
+        GET/PUT /agents/{aid}/skills        Agent-Skill 绑定
+Skill:  GET /skills  PATCH/DELETE /skills/{sid}
+范式预设: GET /paradigm-presets  PUT /paradigm-presets/{paradigm}
+模型:   GET/POST /models  PATCH/DELETE /models/{mid}
+配置:   GET/PUT /config
+公告:   GET/POST /announcements  PATCH/DELETE /announcements/{aid}
+审计:   GET /audit-logs
+经验卡片: GET /experience-cards  PATCH /experience-cards/{cid}
+        POST /experience-cards/{cid}/review  DELETE /experience-cards/{cid}
+用量:   /usage/summary  /usage/daily  /usage/by-model  /usage/by-user
+知识库: GET/POST /knowledge-bases  GET/PATCH/DELETE /knowledge-bases/{kbid}
+        POST /knowledge-bases/{kbid}/sync
+SQL审计: GET /sql-audit
+公共文件: GET /files  PATCH/DELETE /files/{fid}
+模板:   GET/POST /templates  PATCH/DELETE /templates/{tid}
+
+
+==========================================================================
+【8】数据模型（server/app/models/）
+==========================================================================
+共 22 个数据表（SQLite，存放于 users_data/database/ice_workbench.db）：
+
+User              用户(name/email/password_hash/role/team/auth_role/status)
+Task              任务(id/owner_id/name/paradigm/status/is_shared)
+Workspace         工作空间(关联 task 1:1)
+TaskCollaborator  任务协作者(权限 readonly/collaborate)
+TaskTemplate      任务模板(draft/approved + visibility public/private)
+
+Agent             Agent(name/description/icon/color/paradigm UNIQUE/
+                       config JSON/is_builtin/is_public/publish_status/usage_count)
+AgentMemory       Agent 记忆(对话沉淀的结构化记忆)
+ExperienceCard    经验卡片(draft/approved + priority + 注入 system_prompt)
+
+Skill             Skill(name/category/tool_schema JSON/tool_entry/
+                       source local|managed/is_active)
+
+File              文件(name/format/file_type input|output|public/content/
+                      sync_source feishu|mify_rag/sync_ref/is_public)
+
+Conversation      对话(workspace_id/agent_id)
+Message           消息(role user|agent|system|tool/content_type/metadata)
+MessageFeedback   消息反馈 👍/👎
+
+KnowledgeBase     知识库(飞书 space_id 或 Mify dataset_id)
+KBDocument        知识库文档(目录树 + 同步状态)
+
+ScheduledTask     定时任务(cron + push_channels)
+LLMModel          LLM 模型(provider/badge/is_default/is_pro)
+LLMUsage          每次调用的 token 用量
+SQLAuditLog       SQL 审计(allow/warn/block)
+Announcement     公告(info/warning/critical/is_visible)
+SystemConfig      系统 KV 配置
+AuditLog          审计日志（追加不可删）
+ParadigmPreset    范式预设（Agent + Skills 绑定）
+associations      多对多关联表 workspace_agents / workspace_skills / agent_skills
+
+
+==========================================================================
+【9】LLM 模型清单（含范式预装）
+==========================================================================
+共 13 个模型，OpenAI-compatible 端点，统一通过 httpx SSE 流式调用：
+
+provider       model_id                                显示名         badge   default pro
+─────────────────────────────────────────────────────────────────────────
+OpenAI         azure_openai/gpt-5.4                    GPT-5.4         推荐    ✓
+OpenAI         azure_openai/gpt-5.4-pro                GPT-5.4 Pro     强力          ✓
+OpenAI         azure_openai/gpt-5.5                    GPT-5.5         最新          ✓
+OpenAI         azure_openai/gpt-5.3-codex              GPT-5.3 Codex   代码
+Anthropic      ppio/pa/claude-opus-4-6                 Claude Opus 4.6 强力
+Anthropic      ppio/pa/claude-opus-4-7                 Claude Opus 4.7 最新
+Anthropic      ppio/pa/claude-sonnet-4-6               Claude Sonnet 4.6
+Google         vertex_ai/gemini-3.1-pro-preview        Gemini 3.1 Pro
+Zhipu          xiaomi/glm-5                            GLM-5
+Xiaomi         xiaomi/mimo-v2.5-pro                    MiMo v2.5 Pro
+Moonshot       moonshot/kimi-k2.6                      Kimi K2.6
+Zhipu          zhipuai/glm-5.1                         GLM 5.1
+Tongyi         tongyi/qwen3.6-max-preview              Qwen 3.6 Max
+
+
+==========================================================================
+【10】本地 Agent 系统（agents/）
+==========================================================================
+独立 Python 进程，与平台 Agent 通过 API 桥接，共用 shared/ 运行时。
+
+──────────────────────────────────────────────────────────────────────────
+10.1 shared/ 共享运行时
+──────────────────────────────────────────────────────────────────────────
+runtime.py          AgentDefinition + 主循环
+llm_client.py       OpenAI 兼容 SSE 客户端
+tool_registry.py    ToolDef + 装饰器注册
+skill_engine.py     技能调度
+prompt_builder.py   System Prompt 三段拼装(基础+经验规则+工具)
+memory.py           Agent 记忆
+route_decider.py    意图路由
+trace.py            执行轨迹
+
+──────────────────────────────────────────────────────────────────────────
+10.2 data_analysis/ 数据分析 Agent
+──────────────────────────────────────────────────────────────────────────
+覆盖业务线: 浏览器主端 / 信息流 / 内容中心 / 搜索 / 小说
+工作流: 需求澄清 → SQL 生成(NL-SQL) → 查询执行 → 多专家辩论 → 报告
+工具:
+  generate_sql_via_nlsql / save_sql      NL-SQL 生成与保存
+  execute_query                          Kyuubi SQL 执行
+  save_csv                               导出
+  generate_chart                         图表生成
+  publish_to_feishu                      发布飞书
+  anomaly_detect                         2σ 异常检测
+  event_correlate                        事件关联(±3天窗口)
+  trend_forecast                         趋势预测(默认 7 天)
+  period_compare                         同比/环比
+  auto_drilldown                         自动多维下钻
+专家:
+  experts/prompts.py 含 SQL 工程师 + 数据分析师 + 业务专家 + 反方等多角色 prompt
+  experts/runner.py 协调多轮辩论(MAX_DEBATE_ROUNDS=3)
+  experts/analysis_engine.py 串联完整 pipeline
+NL-SQL: nl-sql/scripts/nl-sql.py + reference/{业务线}/
+
+──────────────────────────────────────────────────────────────────────────
+10.3 know_agent/ 知识库 Agent
+──────────────────────────────────────────────────────────────────────────
+管理飞书知识库「GYH AI学习」(space_id=7631112709378935772)
+管理 Mify 知识库:
+  数据产品SQL          a04075ee-8270-4c30-bd7d-1329bb0aad51
+  数据产品知识库 beta  220c4b24-2575-4f39-aade-e594f8ae5323
+工具:
+  feishu_read / feishu_write / feishu_search   通过 feishu CLI
+  mify_search / mify_upload                    Mify RAG
+认证: feishu CLI OAuth(浏览器登录)，token 自动刷新
+
+──────────────────────────────────────────────────────────────────────────
+10.4 learn_agent/ 学习 Agent
+──────────────────────────────────────────────────────────────────────────
+ai-research-agent/ 子项目: inbox/knowledge/scripts/automation/prompts
+工具:
+  web_fetch         网页抓取
+  check_sources     来源校验
+  generate_digest   摘要生成
+  import_links      链接导入
+Prompts:
+  extract.md   提炼(核心结论/工具/适用场景/风险/可入库)
+  compare.md   对比(一致/新增/修正/冲突)
+  discuss.md   讨论(需用户拍板的取舍)
+
+──────────────────────────────────────────────────────────────────────────
+10.5 general_agent/ 通用 Agent
+──────────────────────────────────────────────────────────────────────────
+集成所有能力，开放任务专用：
+  query_data / generate_chart                 数据分析
+  search_knowledge / web_search / web_fetch   知识/网页
+  create_document                             文档创建
+  feishu_read / feishu_publish                飞书
+  anomaly_detect / trend_forecast / period_compare  分析
+
+
+==========================================================================
+【11】本地 Skill 目录（skills/，25 个）
+==========================================================================
+通过启动扫描 + 解析 SKILL.md 自动注册，可被 LLM function-calling 调用：
+
+文档/内容生成:
+  docx          Word 文档处理(OOXML schemas + scripts)
+  pptx          PowerPoint(OOXML)
+  xlsx          Excel
+  pdf           PDF 处理
+  remotion      程序化视频生成
+
+知识/搜索:
+  notebooklm    NotebookLM 集成(images / references / scripts)
+  enhanced-web-search   增强 Web 搜索
+  feishu        飞书全资源 CLI 操控
+  paper-2-web   论文转网页/视频/海报
+  knowledge-2-web 知识转网页
+
+数据/SQL:
+  kyuubi        Kyuubi SQL 执行
+  nl-sql        NL→SQL（5 业务线 reference）
+
+可视化:
+  imagen                Gemini 图像生成
+  manimgl-best-practices ManimGL(3Blue1Brown 动画) 最佳实践
+  article-illustration-generator 文章配图
+
+UI/前端:
+  frontend-design    高品质前端设计
+  playwright         浏览器自动化
+  fad-executor-ui-figma  Figma 驱动 UI 实现
+  fad-verifier-qc        QC 浏览器自动化验证
+
+工程/规划:
+  fad-brownfield-style       棕地约束守护
+  fad-plan-checker-gates     计划门禁
+  fad-planner-align          PM 对齐
+  fad-doc-export-spreadsheet 交付物 .xlsx
+  planning-with-files        Manus 风格文件计划
+  skill-creator              新技能脚手架
+
+
+==========================================================================
+【12】公共文件（files/）
+==========================================================================
+4 篇 Markdown，作为公共区可引用资料：
+
+使用指南.md          产品使用全流程指南（is_pinned 置顶）
+AB实验规范文档.md    AB 实验设计原则与流程
+指标口径字典.md      指标定义与计算口径
+数据分析方法论.md    分析框架与方法
+
+
+==========================================================================
+【13】Tool Calling 完整执行流程
+==========================================================================
+
+用户消息 (含 referenced_file_ids / referenced_skill_ids)
+   ↓
+组装 LLM 请求
+  · System Prompt = Agent.config.system_prompt
+                   + "## 经验规则" + 已批准经验卡片(最多 20)
+                   + "## 可用工具" + Skill 描述
+  · tools[] = agent_skills 绑定 + 用户引用 Skill 的 tool_schema
+  · 文件内容注入: CSV ≤100 行全量；>100 行 schema+前 20 行；MD/TXT 全量
+   ↓
+httpx SSE 调用 LLM
+   ↓
+├── 文本 chunk → ws agent_message
+└── tool_calls → 执行循环(≤5 轮):
+      ↓ ws tool_call_start
+      ToolExecutor:
+        1. 查 tool_entry → 动态 import
+        2. SQL 类先过安全审计(allow/warn/block)
+        3. 执行函数(共享 ToolExecutionContext)
+           shared_data[kyuubi_sql_query/auto_drilldown/...]
+        4. 单 Tool 30s 超时
+      ↓ ws tool_call_done (含 chart_config?)
+      result 回传 LLM → 继续生成
+      ├── 又 tool_calls → 继续(≤5 轮)
+      └── 文本 → ws agent_message → done
+
+ToolExecutionContext 跨 Skill 共享上下文，跨对话隔离。
+
+
+==========================================================================
+【14】Agent 进化机制（经验卡片）
+==========================================================================
+
+用户对话 → Agent 回复
+   ↓
+异步分析对话质量:
+  · 用户确认有效的分析路径
+  · 高质量回答（👍 标记）
+  · 反复被引用的结论
+   ↓
+提炼写入 AgentMemory
+   ↓
+记忆积累/多次验证 → 自动升级为 ExperienceCard(draft)
+   ↓
+管理员审批 → approved
+   ↓
+注入 Agent System Prompt 的"经验规则"章节(最多 20 条)
+   ↓
+Agent 后续对话行为进化
+
+
+==========================================================================
+【15】设计体系（v3）
+==========================================================================
+
+色板（暖色专业感，Claude Code 风）:
+  主色   #e8915a  Warm Amber       hover #f0a06e  pressed #d07a48
+  Agent  #9b8ec4  Purple
+  暖白文字 #ede9e3   背景 #1a1a1a 纯灰
+  范式色（莫兰迪低饱和）:
+    雾蓝 #7bafd4 (ab) / 暖金 #d4a34e (biz) / 淡紫 #9b8ec4 (gray)
+    灰绿 #6baa8e (data) / 暗红 #c97b7b (wave)
+
+双主题:
+  Dark  默认
+  Light 主色降到 #c27040，背景 #f8f6f3，阴影 0.06
+
+布局尺寸:
+  Global Bar 52px / Context Bar 44px
+  Workspace Sidebar 280px / Admin Sidebar 220px / RightPanel 320px
+  Notification Dropdown 380×480 / Search Modal 600×500
+
+字体:
+  --font-head Sora       --font-body DM Sans      --font-mono JetBrains Mono
+
+动画:
+  fadeUp / slideDown / shimmer / pulse / blink / bounce
+
+背景三级:
+  L3 展示型(introduce/login)  网格 + 2-3 orb
+  L2 导航型(dashboard)        无网格 + 1 顶部 orb
+  L1 工具型(workspace/admin)  零装饰
+
+
+==========================================================================
+【16】实施优先级（PRD 约定）
+==========================================================================
+
+Phase 1 — 核心基础（P1）
+  · 三级角色 + 飞书 OAuth 登录 + Token 安全
+  · 首页三区同屏 + 使用指南置顶
+  · Agent 1:1 范式绑定 + 通用 Agent + 经验卡片系统
+  · Tool Calling 完整执行循环 + Skill 共享上下文
+  · 引用文件/技能 + 文件上传下载
+  · 飞书知识库每日同步 + 工作区目录展示
+  · Agent 对话驱动进化（记忆 → 经验卡片）
+
+Phase 2 — 体验增强（P2）
+  · 内联 ECharts + 推荐追问 + 消息反馈
+  · 对话导出报告 + 向上加载历史
+  · 任务协作 + 模板 + 定时任务
+  · 管理后台 Agent 配置 / Skill 编辑 / 文件管理 / 模板审核
+  · 用量统计 + LLM 成本追踪 + SQL 审计
+  · RAG (Mify) 同步 + 公共文件管理
+
+Phase 3 — 打磨优化（P3）
+  · 文件版本历史 / 重命名 / 搜索
+  · Agent 进化日志 / Skill 测试运行
+  · 批量下载 / 图表导出
+  · 协作者在线状态 / 定时任务告警
+  · 成本 CSV 导出 / 敏感库保护
+
+
+==========================================================================
+完成。详见伴生 HTML：ICE_Workspace_完整功能与页面梳理.html
+==========================================================================

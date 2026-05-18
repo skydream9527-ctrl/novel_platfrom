@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 状态设计演示 (v3)</title>
+<!-- 对应决策：D24 / D29 / D39 · v3 EmptyState / Skeleton / ErrorState / Tool Calling / Streaming -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);
+  --agent:#9b8ec4;--p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --success:#5bb98c;--success-dim:rgba(91,185,140,.12);
+  --warning:#d4a34e;--warning-dim:rgba(212,163,78,.12);
+  --error:#c97b7b;--error-dim:rgba(201,123,123,.12);
+  --info:#7bafd4;--info-dim:rgba(123,175,212,.12);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;
+  padding:32px;line-height:1.5}
+h1{font-family:'Sora',sans-serif;font-size:26px;margin:0 0 6px}
+.intro{color:var(--text-dim);margin-bottom:32px}
+
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
+.section h2{font-family:'Sora',sans-serif;font-size:18px;margin:0 0 6px;color:var(--primary)}
+.section .desc{font-size:12px;color:var(--text-muted);margin-bottom:18px}
+
+.demo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.demo-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:24px;min-height:180px;display:flex;align-items:center;justify-content:center}
+.demo-box.full{grid-column:span 2}
+.demo-label{position:relative}
+.demo-label::before{content:attr(data-label);position:absolute;top:-30px;left:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+
+/* EmptyState */
+.empty-state{text-align:center;color:var(--text-dim)}
+.empty-illust{width:100px;height:100px;margin:0 auto 14px;border-radius:50%;background:var(--surface-3);
+  display:flex;align-items:center;justify-content:center;font-size:40px;position:relative}
+.empty-illust::after{content:"";position:absolute;inset:-8px;border:2px dashed var(--border);border-radius:50%;animation:rotate 20s linear infinite}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.empty-title{font-family:'Sora',sans-serif;font-size:14px;color:var(--text);margin-bottom:6px}
+.empty-cta-text{font-size:12px;margin-bottom:12px}
+.empty-cta{background:var(--primary);color:#1a1a1a;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit}
+
+/* Skeleton */
+.skel{display:flex;flex-direction:column;gap:8px;width:100%}
+.skel-line{height:14px;background:var(--surface-3);border-radius:4px;
+  background-image:linear-gradient(90deg,var(--surface-3) 0%,var(--surface-2) 50%,var(--surface-3) 100%);
+  background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;width:100%}
+.skel-line.title{width:60%;height:18px}
+.skel-line.short{width:80%}
+.skel-line.tiny{width:40%;height:10px}
+
+/* ErrorState */
+.error-state{text-align:center}
+.err-icon{width:60px;height:60px;border-radius:50%;background:var(--warning-dim);
+  display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px}
+.err-icon.error{background:var(--error-dim)}
+.err-title{font-family:'Sora',sans-serif;font-size:15px;margin-bottom:4px}
+.err-desc{font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.err-code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-bottom:14px}
+.err-actions{display:flex;gap:8px;justify-content:center}
+.err-actions button{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit}
+.err-actions .primary{background:var(--primary);color:#1a1a1a;border:none;font-weight:600}
+.err-actions .secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim)}
+
+/* Tool Calling */
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;
+  border-left:3px solid var(--success);max-width:480px;width:100%}
+.tool-card.executing{border-left-color:var(--warning)}
+.tool-card.error{border-left-color:var(--error)}
+.tool-card.timeout{border-left-color:var(--info)}
+.tool-head{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;font-weight:500}
+.tool-head .duration{margin-left:auto;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.tool-args{background:var(--surface-2);padding:6px 10px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin:6px 0}
+.tool-result{padding:5px 10px;border-radius:5px;font-size:12px}
+.tool-result.success{background:var(--success-dim);color:var(--success)}
+.tool-result.fail{background:var(--error-dim);color:var(--error)}
+.tool-error-code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:4px}
+.tool-fail-actions{display:flex;gap:6px;margin-top:8px}
+.tool-fail-actions button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit}
+
+/* Streaming + Typing */
+.stream-bubble{background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 12px 4px;padding:12px 16px;font-size:14px;max-width:480px}
+.cursor{display:inline-block;width:2px;height:14px;background:var(--primary);vertical-align:-2px;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.typing-dots{display:flex;gap:4px;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 12px 4px;width:fit-content}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--primary-hover,var(--primary));
+  animation:bounce 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-6px);opacity:1}}
+
+/* Warning Banner */
+.banner{padding:10px 16px;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:13px;width:100%}
+.banner.warning{background:var(--warning-dim);border:1px solid var(--warning);color:var(--text)}
+.banner.error{background:var(--error-dim);border:1px solid var(--error);color:var(--text)}
+.banner.info{background:var(--info-dim);border:1px solid var(--info);color:var(--text)}
+.banner a{color:inherit;font-weight:500;text-decoration:underline}
+.banner .close{margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<h1>v3 状态设计演示</h1>
+<p class="intro">所有状态组件库（Empty / Skeleton / Error / Tool Calling / Streaming / Banner）— 决策依据：D24 / D29 / D39 / SHARED.md §8</p>
+
+<!-- EmptyState -->
+<div class="section">
+  <h2>EmptyState · 引导型空状态</h2>
+  <div class="desc">不只说"暂无"，引导下一步操作 — D24 设计规范</div>
+  <div class="demo-grid">
+    <div class="demo-box demo-label" data-label="无历史任务">
+      <div class="empty-state">
+        <div class="empty-illust">📋</div>
+        <div class="empty-title">还没有任务</div>
+        <div class="empty-cta-text">选择上方一个范式开始你的第一个任务</div>
+        <button class="empty-cta">+ 创建第一个任务</button>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="筛选无结果">
+      <div class="empty-state">
+        <div class="empty-illust" style="font-size:30px">🔍</div>
+        <div class="empty-title">没有匹配的任务</div>
+        <div class="empty-cta-text">尝试调整筛选条件或清除所有筛选</div>
+        <button class="empty-cta" style="background:var(--surface-3);color:var(--text)">清除筛选</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Skeleton -->
+<div class="section">
+  <h2>Skeleton · 骨架屏（shimmer 动画）</h2>
+  <div class="desc">不用 spinner，用骨架屏 + shimmer 动画</div>
+  <div class="demo-grid">
+    <div class="demo-box demo-label" data-label="任务卡骨架">
+      <div class="skel-card">
+        <div class="skel-line title"></div>
+        <div class="skel-line short" style="margin-top:8px"></div>
+        <div class="skel-line"></div>
+        <div class="skel-line tiny" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="文档段落骨架">
+      <div class="skel">
+        <div class="skel-line title"></div>
+        <div class="skel-line"></div>
+        <div class="skel-line short"></div>
+        <div class="skel-line"></div>
+        <div class="skel-line short"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ErrorState -->
+<div class="section">
+  <h2>ErrorState · 阻塞型错误</h2>
+  <div class="desc">替换内容区域 + 提供恢复路径 + 错误码</div>
+  <div class="demo-grid">
+    <div class="demo-box demo-label" data-label="密码错误">
+      <div class="error-state">
+        <div class="err-icon">🔒</div>
+        <div class="err-title">账号或密码错误</div>
+        <div class="err-desc">请检查您的账号信息后重试</div>
+        <div class="err-code">INVALID_CREDENTIALS</div>
+        <div class="err-actions">
+          <button class="primary">重新输入</button>
+          <button class="secondary">忘记密码</button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="无权限">
+      <div class="error-state">
+        <div class="err-icon">🔐</div>
+        <div class="err-title">无权限访问</div>
+        <div class="err-desc">该页面仅超级管理员可访问</div>
+        <div class="err-code">PERMISSION_DENIED</div>
+        <div class="err-actions">
+          <button class="primary">返回首页</button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="致命错误">
+      <div class="error-state">
+        <div class="err-icon error">💥</div>
+        <div class="err-title">连接已断开</div>
+        <div class="err-desc">WebSocket 已断开，请刷新页面重试</div>
+        <div class="err-code">WS_DISCONNECTED</div>
+        <div class="err-actions">
+          <button class="primary">刷新页面</button>
+          <button class="secondary">联系 @gongyunhe</button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="登录频率超限">
+      <div class="error-state">
+        <div class="err-icon">⏱</div>
+        <div class="err-title">登录尝试过频繁</div>
+        <div class="err-desc">请 60 秒后重试（倒计时 42s）</div>
+        <div class="err-code">LOGIN_RATE_LIMITED</div>
+        <div class="err-actions">
+          <button class="primary" disabled style="opacity:.5">重试 (42s)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tool Calling 4 状态 -->
+<div class="section">
+  <h2>Tool Calling 卡片 · 4 状态</h2>
+  <div class="desc">D38-D39 · 执行中/成功/失败/超时</div>
+  <div class="demo-grid">
+    <div class="demo-box demo-label" data-label="执行中">
+      <div class="tool-card executing">
+        <div class="tool-head"><span>⏳</span><span>正在执行 · SQL 查询</span></div>
+        <div class="tool-args">user_dim: dau, days: 7</div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="成功">
+      <div class="tool-card">
+        <div class="tool-head"><span>✅</span><span>已执行 · SQL 查询</span><span class="duration">1.2s</span></div>
+        <div class="tool-args">SELECT * FROM ...</div>
+        <div class="tool-result success">返回 14 行数据</div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="失败">
+      <div class="tool-card error">
+        <div class="tool-head"><span>❌</span><span>执行失败 · 显著性检验</span></div>
+        <div class="tool-result fail">连接超时</div>
+        <div class="tool-error-code">error_code: KYUUBI_CONNECTION_TIMEOUT</div>
+        <div class="tool-fail-actions">
+          <button>🔁 重试</button>
+          <button>📋 复制错误</button>
+          <button>🚩 反馈</button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="超时 (30s)">
+      <div class="tool-card timeout">
+        <div class="tool-head"><span>⏱</span><span>已超时 · 数据查询</span><span class="duration">30s</span></div>
+        <div class="tool-result fail" style="background:var(--info-dim);color:var(--info)">超过 30s 未返回，已标记超时</div>
+        <div class="tool-error-code">error_code: TOOL_TIMEOUT_30s</div>
+        <div class="tool-fail-actions">
+          <button>🔁 重试</button>
+          <button>📋 复制错误</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Streaming + Typing -->
+<div class="section">
+  <h2>对话状态 · Streaming + Typing</h2>
+  <div class="desc">D 现有 + 流式光标 + Typing 三点</div>
+  <div class="demo-grid">
+    <div class="demo-box demo-label" data-label="Streaming 流式">
+      <div class="stream-bubble">
+        基于 7 天数据，新版本留存提升显著：D7 留存 32.5% → 38.1%（+5.6pp）<span class="cursor"></span>
+      </div>
+    </div>
+    <div class="demo-box demo-label" data-label="Typing 思考中">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Warning Banner -->
+<div class="section">
+  <h2>WarningBanner · 顶部告警条</h2>
+  <div class="desc">D26 · 三级 + 24h dismiss + 同时最多 1 条</div>
+  <div class="demo-grid">
+    <div class="demo-box full demo-label" data-label="error 级（不可关闭）">
+      <div class="banner error">
+        <span>🚨</span>
+        <span><strong>WebSocket 已断开</strong>，正在重连... 第 3 次尝试</span>
+      </div>
+    </div>
+    <div class="demo-box full demo-label" data-label="warning 级（24h dismiss）">
+      <div class="banner warning">
+        <span>⚠</span>
+        <span>5 条经验卡片待审批</span>
+        <a href="#">立即处理 →</a>
+        <button class="close">×</button>
+      </div>
+    </div>
+    <div class="demo-box full demo-label" data-label="info 级（24h dismiss）">
+      <div class="banner info">
+        <span>📢</span>
+        <span>5月8日 22:00-23:00 将进行系统升级，届时服务将短暂中断</span>
+        <button class="close">×</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

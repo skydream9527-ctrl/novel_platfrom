@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 文件 + 知识库 (v3)</title>
+<!-- 对应决策：D52-D58 · 统一上传 + 公共文件防删 + 知识库合并 -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --agent:#9b8ec4;--agent-dim:rgba(155,142,196,.12);
+  --p-biz:#d4a34e;--p-biz-dim:rgba(212,163,78,.12);
+  --p-ab:#7bafd4;--p-data:#6baa8e;
+  --success:#5bb98c;--info:#7bafd4;}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;
+  display:grid;grid-template-columns:280px 1fr 360px;line-height:1.5}
+
+/* 侧栏 */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px}
+.sb-section{margin-bottom:18px}
+.sb-title{display:flex;align-items:center;gap:6px;margin-bottom:8px;color:var(--text-muted);
+  font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.sb-title .count{background:var(--surface-2);padding:1px 6px;border-radius:8px;font-size:10px}
+.sb-title .add-btn{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-dim);width:22px;height:22px;border-radius:5px;cursor:pointer;font-size:14px;line-height:1}
+.sb-folder{padding:5px 8px;color:var(--text-muted);font-size:11px;display:flex;align-items:center;gap:4px}
+.sb-folder .pub-tag{font-size:9px;color:var(--text-muted);font-style:italic}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;
+  cursor:pointer;font-size:13px;color:var(--text-dim);transition:all .15s}
+.sb-item:hover{background:var(--surface-2);color:var(--text)}
+.sb-item.active{background:var(--primary-dim);color:var(--primary)}
+.sb-item .ico{width:18px;text-align:center}
+.sb-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-item .ext{font-size:10px;color:var(--text-muted)}
+.sb-item .del{width:18px;height:18px;border-radius:3px;background:transparent;border:none;
+  color:var(--text-muted);cursor:pointer;font-size:12px;display:none}
+.sb-item:hover .del{display:inline-block}
+.sb-item .del:hover{color:#c97b7b;background:rgba(201,123,123,.15)}
+
+/* KB 树（D54-D58 合并 飞书+RAG） */
+.kb-block{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:8px;margin-bottom:8px}
+.kb-head{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+.kb-head .ico{font-size:15px}
+.kb-head .title{flex:1;font-weight:500}
+.kb-head .sync{background:transparent;border:none;color:var(--text-dim);width:22px;height:22px;
+  border-radius:4px;cursor:pointer;font-size:13px}
+.kb-head .sync:hover{background:var(--surface-3);color:var(--success)}
+.kb-meta{font-size:10px;color:var(--text-muted);margin-top:3px;padding-left:21px}
+.kb-tree{margin-top:6px;padding-left:21px}
+.tree-node{padding:4px 6px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text-dim);
+  display:flex;align-items:center;gap:5px}
+.tree-node:hover{background:var(--surface-3);color:var(--text)}
+.tree-node.folder{font-weight:500}
+.tree-children{padding-left:14px;border-left:1px dashed var(--border)}
+
+/* 主区（拖拽上传 + 大文件区） */
+.main{padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.upload-area{background:var(--surface);border:2px dashed var(--border);border-radius:12px;
+  padding:32px;text-align:center;color:var(--text-dim);cursor:pointer;transition:all .15s}
+.upload-area:hover,.upload-area.dragover{border-color:var(--primary);background:var(--primary-dim)}
+.upload-area .icon{font-size:36px;margin-bottom:8px}
+.upload-area .hint{font-size:12px;color:var(--text-muted);margin-top:6px}
+
+/* 上传进度（D52） */
+.upload-progress{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.upload-progress h3{font-family:'Sora',sans-serif;font-size:13px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.up-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px}
+.up-item .ico{width:24px;text-align:center}
+.up-item .info{flex:1}
+.up-item .name{margin-bottom:4px}
+.up-item .bar{height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.up-item .bar-fill{height:100%;background:var(--primary);transition:width .2s}
+.up-item .pct{color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:10px;min-width:40px;text-align:right}
+.up-item .cancel{background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:13px}
+.up-item.done .ico{color:var(--success)}
+.up-item.error .ico{color:#c97b7b}
+.up-item.error .name{color:#c97b7b}
+
+/* 文件列表/面板 */
+.files-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.files-panel h3{font-family:'Sora',sans-serif;font-size:14px;margin:0 0 12px}
+.file-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;
+  font-size:13px;cursor:pointer;transition:background .12s}
+.file-row:hover{background:var(--surface-2)}
+.file-row .ico{font-size:16px;width:24px;text-align:center}
+.file-row .name{flex:1;font-weight:500}
+.file-row .meta{font-size:11px;color:var(--text-muted)}
+.file-row .actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.file-row:hover .actions{opacity:1}
+.file-row .actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  width:24px;height:24px;border-radius:4px;font-size:12px}
+.file-row .actions button:hover{background:var(--surface-3);color:var(--primary)}
+
+/* 右栏 文件预览 (D33 / D34 / D35) */
+.preview{background:var(--surface);border-left:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.preview-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.preview-head .ico{font-size:18px}
+.preview-head .name{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview-head button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  width:28px;height:28px;border-radius:5px;font-size:13px}
+.preview-head button:hover{background:var(--surface-2);color:var(--text)}
+
+.size-warn{background:var(--p-biz-dim);border:1px solid var(--p-biz);color:var(--p-biz);
+  padding:8px 12px;font-size:11px;display:none;align-items:center;gap:6px}
+.size-warn.show{display:flex}
+
+.preview-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 8px;font-size:11px}
+.preview-tab{padding:8px 10px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent}
+.preview-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+.preview-content{flex:1;overflow-y:auto;padding:14px;font-size:13px}
+
+/* CSV 表格预览 (D34) */
+.csv-table{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBrains Mono',monospace}
+.csv-table th{background:var(--surface-2);text-align:left;padding:6px 8px;border:1px solid var(--border);font-weight:600}
+.csv-table td{padding:5px 8px;border:1px solid var(--border)}
+.csv-truncate-tip{font-size:11px;color:var(--text-muted);font-style:italic;text-align:center;padding:8px}
+</style>
+</head>
+<body>
+<!-- 侧栏 -->
+<aside class="sidebar">
+  <div class="sb-section">
+    <div class="sb-title">Files <span class="count">5</span><button class="add-btn" title="上传文件">+</button></div>
+    <div class="sb-folder">▼ 工作产出</div>
+    <div class="sb-item active"><span class="ico" style="color:var(--p-ab)">📝</span><span class="name">Q2 经营报告.md</span><span class="ext">.md</span><button class="del">×</button></div>
+    <div class="sb-item"><span class="ico" style="color:var(--p-biz)">🌐</span><span class="name">留存对比.html</span><span class="ext">.html</span><button class="del">×</button></div>
+    <div class="sb-folder">▼ 需求输入</div>
+    <div class="sb-item"><span class="ico" style="color:var(--p-data)">📊</span><span class="name">原始数据.csv</span><span class="ext">.csv</span><button class="del">×</button></div>
+    <div class="sb-folder">▼ 公共文件 <span class="pub-tag">防误删 (D53)</span></div>
+    <div class="sb-item"><span class="ico">📝</span><span class="name">使用指南.md</span><span class="ext">.md</span></div>
+    <div class="sb-item"><span class="ico">📝</span><span class="name">AB实验规范.md</span><span class="ext">.md</span></div>
+  </div>
+
+  <!-- 知识库合并 (D54) -->
+  <div class="sb-section">
+    <div class="sb-title">📚 知识库 <span class="count">2</span></div>
+
+    <div class="kb-block">
+      <div class="kb-head">
+        <span class="ico">📖</span>
+        <span class="title">飞书·产品 KB</span>
+        <button class="sync" title="上次同步：今天 09:00">🔄</button>
+        <span style="color:var(--text-muted)">▾</span>
+      </div>
+      <div class="kb-meta">12 文档 · 同步成功</div>
+      <div class="kb-tree">
+        <div class="tree-node folder">📁 产品规范</div>
+        <div class="tree-children">
+          <div class="tree-node">📄 AB实验规范 v3</div>
+          <div class="tree-node">📄 埋点规范 v2</div>
+        </div>
+        <div class="tree-node folder">📁 经营分析</div>
+        <div class="tree-children">
+          <div class="tree-node">📄 KPI 体系定义</div>
+          <div class="tree-node">📄 归因方法论</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kb-block">
+      <div class="kb-head">
+        <span class="ico">🧠</span>
+        <span class="title">Mify·数据规范</span>
+        <button class="sync" title="上次同步：今天 09:00">🔄</button>
+        <span style="color:var(--text-muted)">▾</span>
+      </div>
+      <div class="kb-meta">8 文档 · RAG 向量检索</div>
+      <div class="kb-tree">
+        <div class="tree-node">📄 核心指标口径</div>
+        <div class="tree-node">📄 数据质量标准</div>
+        <div class="tree-node">📄 SQL 最佳实践</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- 主区 -->
+<main class="main">
+  <!-- 上传区 (D52 useFileUpload) -->
+  <div class="upload-area">
+    <div class="icon">📂</div>
+    <div><strong>拖拽文件到此处上传</strong></div>
+    <div class="hint">支持 md, csv, txt, json, sql, py, html · 单文件最大 20MB</div>
+  </div>
+
+  <!-- 上传进度 (D52) -->
+  <div class="upload-progress">
+    <h3>📤 上传进度（3 个文件）</h3>
+    <div class="up-item">
+      <span class="ico">📊</span>
+      <div class="info">
+        <div class="name">销售数据.csv</div>
+        <div class="bar"><div class="bar-fill" style="width:67%"></div></div>
+      </div>
+      <span class="pct">67%</span>
+      <button class="cancel">×</button>
+    </div>
+    <div class="up-item done">
+      <span class="ico">✅</span>
+      <div class="info">
+        <div class="name">需求 v2.md</div>
+        <div class="bar"><div class="bar-fill" style="width:100%;background:var(--success)"></div></div>
+      </div>
+      <span class="pct" style="color:var(--success)">已完成</span>
+    </div>
+    <div class="up-item error">
+      <span class="ico">❌</span>
+      <div class="info">
+        <div class="name">超大文件.zip</div>
+        <div style="font-size:10px;color:#c97b7b">超过 20MB 上限，无法上传</div>
+      </div>
+      <button class="cancel" style="color:var(--primary)">🔁</button>
+    </div>
+  </div>
+
+  <!-- 文件清单 -->
+  <div class="files-panel">
+    <h3>所有文件</h3>
+    <div class="file-row">
+      <span class="ico" style="color:var(--p-ab)">📝</span>
+      <span class="name">Q2 经营报告.md</span>
+      <span class="meta">12.3 KB · 2 小时前</span>
+      <div class="actions"><button title="下载">⬇</button><button title="重命名">✏</button><button title="删除">🗑</button></div>
+    </div>
+    <div class="file-row">
+      <span class="ico" style="color:var(--p-biz)">🌐</span>
+      <span class="name">留存对比.html</span>
+      <span class="meta">8.5 KB · 昨天</span>
+      <div class="actions"><button title="下载">⬇</button><button title="重命名">✏</button><button title="删除">🗑</button></div>
+    </div>
+    <div class="file-row">
+      <span class="ico" style="color:var(--p-data)">📊</span>
+      <span class="name">原始数据.csv</span>
+      <span class="meta">320 KB · 3 天前</span>
+      <div class="actions"><button title="下载">⬇</button><button title="重命名">✏</button><button title="删除">🗑</button></div>
+    </div>
+  </div>
+</main>
+
+<!-- 右栏 文件预览 (D33-D35) -->
+<aside class="preview">
+  <div class="preview-head">
+    <span class="ico">📊</span>
+    <span class="name">原始数据.csv</span>
+    <button title="下载">⬇</button>
+    <button title="重命名">✏</button>
+    <button title="关闭">✕</button>
+  </div>
+
+  <!-- 大文件警告 (D34) -->
+  <div class="size-warn show">
+    ⚠ 文件较大 (320 KB)，仅预览前 100 行 · <a href="#" style="color:var(--p-biz);text-decoration:underline">下载查看完整数据</a>
+  </div>
+
+  <div class="preview-tabs">
+    <div class="preview-tab active">📄 文件</div>
+    <div class="preview-tab">⚙ 配置</div>
+    <div class="preview-tab">🤖 Agent</div>
+    <div class="preview-tab">👥 协作</div>
+  </div>
+
+  <div class="preview-content">
+    <table class="csv-table">
+      <thead>
+        <tr><th>date</th><th>user_dim</th><th>dau</th><th>retention_d7</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>2026-04-29</td><td>new</td><td>12,345</td><td>32.5%</td></tr>
+        <tr><td>2026-04-30</td><td>new</td><td>13,210</td><td>33.8%</td></tr>
+        <tr><td>2026-05-01</td><td>new</td><td>14,890</td><td>35.2%</td></tr>
+        <tr><td>2026-05-02</td><td>new</td><td>15,420</td><td>36.7%</td></tr>
+        <tr><td>2026-05-03</td><td>new</td><td>15,820</td><td>38.1%</td></tr>
+        <tr><td>2026-04-29</td><td>old</td><td>89,234</td><td>61.8%</td></tr>
+        <tr><td>2026-04-30</td><td>old</td><td>92,109</td><td>62.5%</td></tr>
+        <tr><td>2026-05-01</td><td>old</td><td>94,221</td><td>63.0%</td></tr>
+      </tbody>
+    </table>
+    <p class="csv-truncate-tip">显示前 8 行 · 总计 14 行</p>
+  </div>
+</aside>
+</body>
+</html>

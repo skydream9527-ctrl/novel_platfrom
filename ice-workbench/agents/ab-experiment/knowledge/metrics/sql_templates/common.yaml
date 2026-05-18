@@ -1,0 +1,27 @@
+common_tables:
+  browser_event: iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+  browser_ad: iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+  browser_event_detail: iceberg_zjyprc_hadoop.dw.dwd_ot_event_di_31000000442
+  newhome_event: iceberg_zjyprc_hadoop.newhome.dwm_newhome_event_aggregation_label_di
+  newhome_ad: iceberg_zjyprc_hadoop.newhome.dwm_newhome_ad_event_aggregation_di
+  newhome_event_detail: iceberg_zjyprc_hadoop.dw.dwd_ot_event_di_31000000297
+
+date_parameter:
+  name: date
+  description: 日期参数，格式为 ${date-N}，表示N天前
+  examples:
+    - "${date-1} → 昨日"
+    - "${date-7} → 7天前"
+    - "${date-30} → 30天前"
+
+srm_check_query:
+  description: SRM校验查询模板（样本比例校验）
+  note: 用于校验实验组与对照组的样本比例是否符合预期分配比，需根据实际实验分流表替换表名和字段名
+  template: |
+    SELECT
+      group_name,
+      COUNT(DISTINCT user_id) AS sample_size
+    FROM experiment_user_table
+    WHERE experiment_id = '{experiment_id}'
+      AND date BETWEEN '{start_date}' AND '{end_date}'
+    GROUP BY group_name

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head><meta charset="UTF-8" /><title>ICE Workbench · 定时任务 (v3)</title>
+<!-- 对应决策：D77-D82 · 删模板 tab + cron 可读 + history inline -->
+<style>
+:root[data-theme="dark"]{--bg:#1a1a1a;--surface:#212121;--surface-2:#2a2a2a;--surface-3:#333;
+  --border:#3d3d3d;--text:#ede9e3;--text-dim:#a39e93;--text-muted:#6b6560;
+  --primary:#e8915a;--primary-dim:rgba(232,145,90,.12);--primary-hover:#f0a06e;
+  --p-biz:#d4a34e;--p-wave:#c97b7b;--p-data:#6baa8e;
+  --p-biz-dim:rgba(212,163,78,.12);--p-wave-dim:rgba(201,123,123,.12);--p-data-dim:rgba(107,170,142,.12);
+  --success:#5bb98c;--success-dim:rgba(91,185,140,.12);
+  --error:#c97b7b;--error-dim:rgba(201,123,123,.12);
+  --warning:#d4a34e;--info:#7bafd4;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans','Microsoft YaHei',sans-serif;line-height:1.5}
+.topnav{height:52px;background:rgba(33,33,33,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.back{background:var(--surface-2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:7px;cursor:pointer}
+.crumb{font-size:13px;color:var(--text-dim)}
+.crumb .current{color:var(--text)}
+
+.page{max-width:1080px;margin:0 auto;padding:24px}
+
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.chip{background:var(--surface-2);border:1px solid var(--border);padding:5px 12px;
+  border-radius:6px;font-size:12px;cursor:pointer;color:var(--text-dim)}
+.chip.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary)}
+.search{flex:1;max-width:240px;background:var(--surface-2);border:1px solid var(--border);
+  padding:5px 10px;border-radius:6px;color:var(--text);font-size:12px;margin-left:auto}
+.btn-create{background:var(--primary);color:#1a1a1a;border:none;padding:6px 14px;
+  border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit}
+
+/* 任务卡 */
+.task{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.task.paused{opacity:.7}
+.task-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.task-icon{font-size:20px}
+.task-name{font-weight:600;font-size:14px;flex:1}
+.status-badge{padding:3px 10px;border-radius:5px;font-size:11px;font-weight:500}
+.status-running{background:var(--success-dim);color:var(--success)}
+.status-paused{background:var(--surface-2);color:var(--text-muted)}
+.task-actions{display:flex;gap:6px}
+.task-actions button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:5px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-family:inherit}
+.task-actions button:hover{border-color:var(--primary);color:var(--primary)}
+.task-actions .danger:hover{border-color:var(--error);color:var(--error)}
+
+.task-info{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 16px;margin-bottom:10px;font-size:12px}
+.info-row{display:flex;gap:10px}
+.info-row .label{color:var(--text-muted);min-width:60px}
+.info-row .value{color:var(--text)}
+.cron-readable{color:var(--success);font-size:11px}
+
+.prompt-preview{background:var(--surface-2);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--text-dim);
+  margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6}
+
+/* 执行历史 inline (D81) */
+.history{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.history-title{font-size:11px;color:var(--text-muted);margin-bottom:6px}
+.history-table{width:100%;font-size:11px;border-collapse:collapse}
+.history-table th{text-align:left;color:var(--text-muted);padding:6px 8px;font-weight:normal;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.history-table td{padding:6px 8px;border-top:1px solid var(--border)}
+.history-row{cursor:pointer}
+.history-row:hover{background:var(--surface-2)}
+.success{color:var(--success)}
+.fail{color:var(--error)}
+
+/* inline 详情展开 */
+.history-detail{display:none;background:var(--surface-2);border-radius:6px;padding:12px;margin-top:6px;font-size:11px}
+.history-row.open + .history-detail{display:block}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:8px}
+.detail-grid .label{color:var(--text-muted)}
+.detail-section{margin-top:10px}
+.detail-section .header{font-size:10px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase}
+.detail-prompt{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:var(--text-dim)}
+.detail-tools{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)}
+.detail-output{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--success-dim);border-radius:5px;color:var(--success)}
+.detail-error{background:var(--error-dim);color:var(--error);padding:8px 12px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap}
+
+.show-all{text-align:center;padding:8px;color:var(--primary);font-size:11px;cursor:pointer}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <button class="back">←</button>
+  <div class="crumb">首页 / <span class="current">定时任务</span></div>
+</nav>
+
+<div class="page">
+  <h1 style="font-family:'Sora',sans-serif;margin-bottom:20px">⏱ 定时任务</h1>
+
+  <!-- 工具条 (D78) -->
+  <div class="toolbar">
+    <span class="chip active">全部 (3)</span>
+    <span class="chip">运行中 (2)</span>
+    <span class="chip">已暂停 (1)</span>
+    <span class="chip">失败 ≥1次</span>
+    <span class="chip">Agent: 任意 ▾</span>
+    <span class="chip">任务: 任意 ▾</span>
+    <input class="search" placeholder="🔍 搜索任务名" />
+    <button class="btn-create">+ 创建定时任务</button>
+  </div>
+
+  <!-- 任务卡 1 -->
+  <div class="task">
+    <div class="task-head">
+      <span class="task-icon">📈</span>
+      <span class="task-name">每日经营日报</span>
+      <span class="status-badge status-running">● 运行中</span>
+      <div class="task-actions">
+        <button>▶ 立即执行</button>
+        <button>⏸ 暂停</button>
+        <button>✏ 编辑</button>
+        <button class="danger">🗑 删除</button>
+      </div>
+    </div>
+    <div class="task-info">
+      <div class="info-row"><span class="label">关联任务</span><span class="value">Q2 经营复盘 →</span></div>
+      <div class="info-row"><span class="label">Agent</span><span class="value">📈 经营洞察</span></div>
+      <div class="info-row">
+        <span class="label">频率</span>
+        <span class="value"><code style="font-family:monospace;font-size:11px">0 9 * * *</code> <span class="cron-readable">→ 每日 09:00</span></span>
+      </div>
+      <div class="info-row"><span class="label">推送</span><span class="value">飞书通知 + 保存文件</span></div>
+      <div class="info-row"><span class="label">上次</span><span class="value">2026-05-06 09:00 <span class="success">✓ 45s</span></span></div>
+      <div class="info-row"><span class="label">下次</span><span class="value">2026-05-07 09:00</span></div>
+    </div>
+    <div class="prompt-preview">查询昨日核心经营指标（DAU/收入/付费率），对比前日和上周同期，生成经营日报</div>
+
+    <!-- 执行历史 inline (D81) -->
+    <div class="history">
+      <div class="history-title">执行历史（最近 4 次）</div>
+      <table class="history-table">
+        <thead>
+          <tr><th>时间</th><th>状态</th><th>耗时</th><th>Token</th><th>产出</th></tr>
+        </thead>
+        <tbody>
+          <tr class="history-row open" onclick="this.classList.toggle('open')">
+            <td>05-06 09:00</td>
+            <td class="success">✓ 成功</td>
+            <td>45s</td>
+            <td>3.2K</td>
+            <td>经营日报_0506.md</td>
+          </tr>
+          <tr><td colspan="5" style="padding:0">
+            <div class="history-detail">
+              <div class="detail-grid">
+                <div><span class="label">用户：</span>张明远</div>
+                <div><span class="label">模型：</span>Claude Opus 4.7</div>
+                <div><span class="label">输入 Token：</span>2,180</div>
+                <div><span class="label">输出 Token：</span>1,020</div>
+              </div>
+              <div class="detail-section">
+                <div class="header">完整 Prompt</div>
+                <div class="detail-prompt">查询昨日核心经营指标（DAU/收入/付费率），对比前日和上周同期，生成经营日报。重点关注异常波动并归因...</div>
+              </div>
+              <div class="detail-section">
+                <div class="header">工具调用</div>
+                <div class="detail-tools">→ query_data (1.2s) ✓<br/>→ calculate_metric (0.8s) ✓<br/>→ generate_report (2.5s) ✓</div>
+              </div>
+              <div class="detail-section">
+                <div class="header">产出文件</div>
+                <div class="detail-output">📝 经营日报_0506.md · 12.3 KB · 点击查看</div>
+              </div>
+            </div>
+          </td></tr>
+
+          <tr class="history-row" onclick="this.classList.toggle('open')">
+            <td>05-05 09:00</td><td class="success">✓ 成功</td><td>38s</td><td>2.9K</td><td>经营日报_0505.md</td>
+          </tr>
+          <tr class="history-row" onclick="this.classList.toggle('open')">
+            <td>05-04 09:00</td><td class="fail">✗ 失败</td><td>12s</td><td>0.5K</td><td>LLM 超时</td>
+          </tr>
+          <tr><td colspan="5" style="padding:0">
+            <div class="history-detail">
+              <div class="detail-grid">
+                <div><span class="label">用户：</span>张明远</div>
+                <div><span class="label">模型：</span>Claude Opus 4.7</div>
+              </div>
+              <div class="detail-section">
+                <div class="header">错误信息</div>
+                <div class="detail-error">error_code: TOOL_TIMEOUT_30s
+TimeoutError: tool 'query_data' did not return within 30s
+  at Kyuubi connection: timeout after 30000ms</div>
+              </div>
+            </div>
+          </td></tr>
+          <tr class="history-row"><td>05-03 09:00</td><td class="success">✓ 成功</td><td>42s</td><td>3.1K</td><td>经营日报_0503.md</td></tr>
+        </tbody>
+      </table>
+      <div class="show-all">查看全部 →</div>
+    </div>
+  </div>
+
+  <!-- 任务卡 2 -->
+  <div class="task">
+    <div class="task-head">
+      <span class="task-icon">🔥</span>
+      <span class="task-name">异常波动监控</span>
+      <span class="status-badge status-running">● 运行中</span>
+      <div class="task-actions">
+        <button>▶ 立即执行</button>
+        <button>⏸ 暂停</button>
+        <button>✏ 编辑</button>
+        <button class="danger">🗑 删除</button>
+      </div>
+    </div>
+    <div class="task-info">
+      <div class="info-row"><span class="label">Agent</span><span class="value">🔥 波动归因</span></div>
+      <div class="info-row">
+        <span class="label">频率</span>
+        <span class="value"><code style="font-family:monospace;font-size:11px">0 10,14,18 * * *</code> <span class="cron-readable">→ 每日 10:00, 14:00, 18:00</span></span>
+      </div>
+      <div class="info-row"><span class="label">推送</span><span class="value">飞书通知（仅异常时）</span></div>
+      <div class="info-row"><span class="label">下次</span><span class="value">2026-05-07 14:00</span></div>
+    </div>
+    <div class="prompt-preview">检查今日核心指标是否存在异常波动（超过±5%），如有异常进行归因</div>
+  </div>
+
+  <!-- 任务卡 3 已暂停 -->
+  <div class="task paused">
+    <div class="task-head">
+      <span class="task-icon">📊</span>
+      <span class="task-name">周度数据报告</span>
+      <span class="status-badge status-paused">⏸ 已暂停</span>
+      <div class="task-actions">
+        <button>▶ 恢复</button>
+        <button>✏ 编辑</button>
+        <button class="danger">🗑 删除</button>
+      </div>
+    </div>
+    <div class="task-info">
+      <div class="info-row"><span class="label">Agent</span><span class="value">📊 数据分析</span></div>
+      <div class="info-row">
+        <span class="label">频率</span>
+        <span class="value"><code style="font-family:monospace;font-size:11px">30 9 * * 1</code> <span class="cron-readable">→ 每周一 09:30</span></span>
+      </div>
+      <div class="info-row"><span class="label">下次</span><span class="value" style="color:var(--text-muted)">— 已暂停</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

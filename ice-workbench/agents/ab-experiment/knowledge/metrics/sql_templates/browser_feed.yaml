@@ -1,0 +1,632 @@
+dimension: 浏览器信息流
+source_table: iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+ad_table: iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+dau_flag: is_dau_feed_dapan_2024=1
+
+规模指标:
+  - name: 浏览器信息流DAU/日活
+    sql: |
+      SELECT  date, count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+      GROUP BY date
+
+  - name: 浏览器信息流分新老用户DAU/日活
+    sql: |
+      SELECT  date,
+              CASE WHEN is_new_feed_2024=1 THEN 'new'
+                   WHEN is_new_feed_2024=0 THEN 'old'
+              END as is_new_user,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+      GROUP BY date,
+               CASE WHEN is_new_feed_2024=1 THEN 'new'
+                    WHEN is_new_feed_2024=0 THEN 'old'
+               END
+    drill_dimension: is_new_user
+
+  - name: 浏览器信息流消费DAU/日活
+    sql: |
+      SELECT
+          date,
+          count(distinct did)
+      FROM
+          iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE
+          date=${date-1}
+          and is_dau_feed_dapan_2024=1
+          and consum_cnt_v2>0
+      GROUP BY
+          date
+
+  - name: 浏览器信息流PUSH DAU/日活
+    sql: |
+      SELECT  count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date = ${date-1}
+              and is_dau_feed_dapan_2024=1
+              and app_launch_way like '%push%'
+
+  - name: 浏览器信息流分体裁消费DAU/日活
+    sql: |
+      SELECT  date, item_type,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_cnt_v2>0
+      GROUP BY date, item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流分频道消费DAU/日活
+    sql: |
+      SELECT  date, feed_channel,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_cnt_v2>0
+      GROUP BY date, feed_channel
+    drill_dimension: feed_channel
+
+  - name: 浏览器信息流分页面消费DAU/日活
+    sql: |
+      SELECT  date, page,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_cnt_v2>0
+      GROUP BY date, page
+    drill_dimension: page
+
+消费指标:
+  - name: 浏览器信息流分页面曝光UV/曝光PV
+    sql: |
+      SELECT  date, page,
+              count(distinct did) uv,
+              sum(expos_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+      GROUP BY date, page
+    drill_dimension: page
+
+  - name: 浏览器信息流分体裁曝光UV/曝光PV
+    sql: |
+      SELECT  date, item_type,
+              count(distinct did) uv,
+              sum(expos_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+      GROUP BY date, item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流分频道曝光UV/曝光PV
+    sql: |
+      SELECT  date, feed_channel,
+              count(distinct did) uv,
+              sum(expos_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+      GROUP BY date, feed_channel
+    drill_dimension: feed_channel
+
+  - name: 浏览器信息流分页面点击UV/点击PV
+    sql: |
+      SELECT  date, page,
+              count(distinct did) uv,
+              sum(click_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and click_cnt>0
+      GROUP BY date, page
+    drill_dimension: page
+
+  - name: 浏览器信息流分体裁点击UV/点击PV
+    sql: |
+      SELECT  date, item_type,
+              count(distinct did) uv,
+              sum(click_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and click_cnt>0
+      GROUP BY date, item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流分频道点击UV/点击PV
+    sql: |
+      SELECT  date, feed_channel,
+              count(distinct did) uv,
+              sum(click_cnt) pv
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and click_cnt>0
+      GROUP BY date, feed_channel
+    drill_dimension: feed_channel
+
+  - name: 浏览器信息流人均时长
+    sql: |
+      SELECT  sum(feed_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and feed_dura>0
+
+  - name: 浏览器信息流人均消费时长
+    sql: |
+      SELECT  sum(consum_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_dura>0
+
+  - name: 浏览器信息流分体裁人均消费时长
+    sql: |
+      SELECT  item_type,
+              sum(consum_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_dura>0
+      GROUP BY item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流人均VV
+    sql: |
+      SELECT  sum(consum_cnt_v2)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+
+  - name: 浏览器信息流分体裁人均VV
+    sql: |
+      SELECT  item_type,
+              sum(consum_cnt_v2)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+      GROUP BY item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流消费用户人均VV
+    sql: |
+      SELECT  item_type,
+              sum(consum_cnt_v2)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_cnt_v2>0
+      GROUP BY item_type
+    drill_dimension: item_type
+
+  - name: 浏览器信息流人均曝光
+    sql: |
+      SELECT  date,
+              sum(expos_cnt)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+      GROUP BY date
+
+  - name: 浏览器信息流消费用户人均曝光
+    sql: |
+      SELECT date,
+              sum(expos_cnt)/count(distinct did)
+      FROM iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+              and consum_cnt_v2>0
+      GROUP BY date
+
+收入指标:
+  - name: 浏览器信息流ARPU
+    sql: |
+      SELECT  a.date,
+              sum(fee)/count(distinct a.did) arpu
+      FROM
+      (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      )a
+      join
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date
+
+  - name: 浏览器信息流消费用户ARPU
+    sql: |
+      SELECT  a.date,
+              sum(fee)/count(distinct a.did) arpu
+      FROM
+      (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_dau_feed_dapan_2024=1
+                  and consum_cnt_v2>0
+          GROUP BY date, did
+      )a
+      join
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date
+
+留存与LT指标:
+  - name: 浏览器信息流次日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and is_dau_feed_dapan_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=1
+      GROUP BY a.date;
+
+  - name: 浏览器信息流7日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-30} and ${date-1}
+                      and is_dau_feed_dapan_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=7
+      GROUP BY a.date;
+
+  - name: 浏览器信息流30日留存率
+    sql: |
+      with
+          a as (
+              SELECT  date, did
+              FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+              WHERE   date between ${date-60} and ${date-1}
+                      and is_dau_feed_dapan_2024=1
+              GROUP BY date, did
+          )
+      SELECT  a.date,
+              count(distinct a.did) as uv,
+              count(distinct b.did) as uv_retent,
+              count(distinct b.did)/count(distinct a.did) as uv_retent_rate
+      FROM
+          (
+              SELECT  date, did
+              FROM    a
+          ) a
+          left join (
+              SELECT  date, did
+              FROM    a
+          ) b
+          on a.did=b.did
+          and datediff(FROM_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), FROM_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'))=30
+      GROUP BY a.date;
+
+  - name: 浏览器信息流LT3
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-7} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=2
+      GROUP BY a.date
+
+  - name: 浏览器信息流LT7
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-30} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=6
+      GROUP BY a.date
+
+  - name: 浏览器信息流LT30
+    sql: |
+      with t1 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      ),
+      t2 as (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date between ${date-60} and ${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      )
+      SELECT  a.date,
+              count(b.date)/count(distinct a.did) LT
+      FROM
+          (
+              SELECT  date, did
+              FROM    t1
+          ) a
+          LEFT JOIN (
+              SELECT  date, did
+              FROM    t2
+          ) b
+          on a.did=b.did
+      WHERE
+          b.date>=a.date
+          and datediff(from_unixtime(unix_timestamp(cast(b.date as string), 'yyyyMMdd'), 'yyyy-MM-dd'), from_unixtime(unix_timestamp(cast(a.date as string), 'yyyyMMdd'),'yyyy-MM-dd'))<=29
+      GROUP BY a.date
+
+下钻维度:
+  - name: 分内容源（火山/自建）浏览器信息流DAU/日活
+    sql: |
+      SELECT  date,
+              CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+      GROUP BY date,
+               CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流分新老用户DAU/日活
+    sql: |
+      SELECT  date,
+              CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              CASE WHEN is_new_feed_2024=1 THEN 'new'
+                   WHEN is_new_feed_2024=0 THEN 'old'
+              END as is_new_user,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+      GROUP BY date,
+               CASE WHEN is_new_feed_2024=1 THEN 'new'
+                    WHEN is_new_feed_2024=0 THEN 'old'
+               END,
+               CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流消费DAU/日活
+    sql: |
+      SELECT  date,
+              CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_cnt_v2>0
+      GROUP BY date,
+               CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流人均时长
+    sql: |
+      SELECT  CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              sum(feed_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and feed_dura>0
+      GROUP BY CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流人均消费时长
+    sql: |
+      SELECT  CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              sum(consum_dura)/60000/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and consum_dura>0
+      GROUP BY CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流人均VV
+    sql: |
+      SELECT  CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              sum(consum_cnt_v2)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+      GROUP BY CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 分内容源（火山/自建）浏览器信息流人均曝光
+    sql: |
+      SELECT  date,
+              CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+              ELSE '火山'
+              END as source,
+              sum(expos_cnt)/count(distinct did)
+      FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+      WHERE   date=${date-1}
+              and is_dau_feed_dapan_2024=1
+              and is_top=0
+              and expos_cnt>0
+      GROUP BY date,
+               CASE WHEN exp_id like '%1960891%' or exp_id like '%1566672%' then '自建'
+               ELSE '火山'
+               END
+    drill_dimension: source
+
+  - name: 浏览器信息流分广告位收入
+    sql: |
+      SELECT  a.date, tag_id, sum(fee) fee
+      FROM
+      (
+          SELECT  date, tag_id,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, tag_id
+      )a
+      LEFT JOIN
+      (
+          SELECT  date, did
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date, tag_id
+    drill_dimension: tag_id
+
+  - name: 浏览器信息流分启动方式收入
+    sql: |
+      SELECT  a.date, app_launch_way, sum(fee) fee
+      FROM
+      (
+          SELECT  date, did, app_launch_way
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_event_aggregation_label_di
+          WHERE   date=${date-1}
+                  and is_dau_feed_dapan_2024=1
+          GROUP BY date, did, app_launch_way
+      )a
+      LEFT JOIN
+      (
+          SELECT  date, did,
+                  sum(fee_amt)/100000 as fee
+          FROM    iceberg_zjyprc_hadoop.browser.dwm_browser_ad_event_aggregation_di
+          WHERE   date=${date-1}
+          GROUP BY date, did
+      )b
+      on a.date=b.date and a.did=b.did
+      GROUP BY a.date, app_launch_way
+    drill_dimension: app_launch_way

@@ -1,0 +1,44 @@
+.cm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeUp 0.16s ease;
+}
+.cm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  min-width: 360px;
+  max-width: 480px;
+  box-shadow: 0 12px 48px var(--shadow);
+}
+.cm-card h3 {
+  font-family: var(--font-head);
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.cm-body {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 18px;
+}
+.cm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.cm-danger {
+  background: var(--error);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}

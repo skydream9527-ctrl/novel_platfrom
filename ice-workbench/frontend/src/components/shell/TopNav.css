@@ -1,0 +1,198 @@
+.topnav {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  background: rgba(33, 33, 33, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+:root[data-theme="light"] .topnav {
+  background: rgba(255, 255, 255, 0.85);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--primary), var(--agent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-name {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 15px;
+}
+.brand-accent {
+  color: var(--primary);
+}
+.back-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.crumb {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.crumb .current {
+  color: var(--text);
+}
+.agent-chip {
+  background: var(--agent-dim);
+  border: 1px solid var(--agent);
+  border-radius: 18px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--agent);
+}
+.right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  position: relative;
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: var(--surface-2);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text);
+}
+.user-pill:hover {
+  background: var(--surface-3);
+}
+.user-pill .avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--agent));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-pill .uname {
+  font-size: 12px;
+}
+.user-pill .caret {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+.user-menu {
+  position: relative;
+}
+.user-menu-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px var(--shadow);
+  padding: 6px;
+  z-index: 100;
+}
+.umi-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 8px;
+}
+.umi-head .avatar.lg {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--agent));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+.umi-info {
+  min-width: 0;
+  flex: 1;
+}
+.umi-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+.umi-role {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.umi-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+.umi-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+}
+.umi-item:hover {
+  background: var(--surface-2);
+}
+.umi-item.danger {
+  color: #e57b7b;
+}
+.umi-item.danger:hover {
+  background: rgba(229, 123, 123, 0.08);
+}

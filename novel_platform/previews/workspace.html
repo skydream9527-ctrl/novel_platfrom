@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作区 — AI 文字创作平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #4a8fe7;
+    --color-primary-hover: #3d7bd4;
+    --color-primary-light: #e8f0fe;
+    --color-bg: #f8f9fa;
+    --color-bg-card: #ffffff;
+    --color-bg-input: #f1f3f4;
+    --color-bg-hover: #f1f3f4;
+    --color-text: #1f1f1f;
+    --color-text-secondary: #5f6368;
+    --color-text-muted: #9aa0a6;
+    --color-border: #e8eaed;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+    --radius: 12px;
+    --radius-lg: 16px;
+    --font-body: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font-body); background:var(--color-bg); color:var(--color-text); -webkit-font-smoothing:antialiased; }
+  button { font-family:inherit; cursor:pointer; border:none; outline:none; }
+  input, textarea { font-family:inherit; outline:none; }
+
+  .workspace { height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+  .ws-header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:var(--color-bg-card); box-shadow:var(--shadow-sm); flex-shrink:0; z-index:5; }
+  .ws-header h1 { font-size:16px; font-weight:600; flex:1; letter-spacing:-0.2px; }
+  .ws-type { font-size:12px; color:var(--color-text-secondary); padding:4px 12px; background:var(--color-bg-input); border-radius:20px; font-weight:500; }
+  .btn-back { background:transparent; color:var(--color-text-secondary); font-size:13px; padding:8px 14px; border-radius:var(--radius); transition:all 0.2s; }
+  .btn-back:hover { color:var(--color-text); background:var(--color-bg-hover); }
+
+  .ws-body { flex:1; display:flex; overflow:hidden; }
+
+  /* Sidebar */
+  .ws-sidebar { width:240px; background:var(--color-bg-card); border-right:1px solid var(--color-border); display:flex; flex-direction:column; flex-shrink:0; }
+  .sidebar-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--color-border); }
+  .sidebar-header h3 { font-size:13px; font-weight:600; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; }
+  .btn-add { width:28px; height:28px; background:var(--color-bg-input); border-radius:8px; color:var(--color-text-secondary); font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+  .btn-add:hover { background:var(--color-primary); color:#fff; }
+  .chapter-list { flex:1; overflow-y:auto; padding:8px 10px; }
+  .chapter-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:var(--radius); cursor:pointer; font-size:13px; transition:all 0.15s; margin-bottom:2px; }
+  .chapter-item:hover { background:var(--color-bg-hover); }
+  .chapter-item.active { background:var(--color-primary-light); color:var(--color-primary); font-weight:500; }
+  .chapter-ver { font-size:11px; color:var(--color-text-muted); }
+
+  /* Editor */
+  .ws-editor { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--color-bg-card); }
+  .editor-toolbar { display:flex; align-items:center; gap:12px; padding:10px 20px; border-bottom:1px solid var(--color-border); }
+  .editor-title-input { flex:1; background:transparent; border:none; color:var(--color-text); font-size:15px; font-weight:600; padding:6px 0; }
+  .editor-title-input::placeholder { color:var(--color-text-muted); }
+  .btn-save { background:var(--color-bg-input); color:var(--color-text-secondary); padding:8px 18px; border-radius:var(--radius); font-size:13px; font-weight:500; transition:all 0.2s; }
+  .btn-save:hover { background:var(--color-primary); color:#fff; }
+  .editor-body { flex:1; display:flex; overflow:hidden; }
+  .editor-textarea { flex:1; background:transparent; border:none; color:var(--color-text); font-size:14px; line-height:1.9; padding:24px 28px; resize:none; font-family:var(--font-mono); border-right:1px solid var(--color-border); font-size:13px; }
+  .editor-textarea::placeholder { color:var(--color-text-muted); font-family:var(--font-body); }
+  .editor-preview { flex:1; padding:24px 28px; overflow-y:auto; font-size:14px; line-height:1.9; }
+  .editor-preview h1 { font-size:22px; margin:0 0 16px; font-weight:700; }
+  .editor-preview h2 { font-size:18px; margin:20px 0 10px; font-weight:600; }
+  .editor-preview p { margin-bottom:14px; color:var(--color-text); }
+
+  /* Chat */
+  .ws-chat { width:360px; background:var(--color-bg-card); border-left:1px solid var(--color-border); display:flex; flex-direction:column; flex-shrink:0; }
+  .chat-header { padding:16px 20px; border-bottom:1px solid var(--color-border); }
+  .chat-header h3 { font-size:13px; font-weight:600; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; }
+  .chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .chat-welcome { background:var(--color-bg-input); border-radius:var(--radius-lg); padding:20px; font-size:13px; color:var(--color-text-secondary); line-height:1.8; }
+  .chat-welcome ul { margin-top:10px; padding-left:20px; }
+  .chat-welcome li { margin-bottom:4px; }
+  .chat-msg.user .msg-content { background:var(--color-primary); color:#fff; padding:12px 16px; border-radius:var(--radius-lg) var(--radius-lg) 4px var(--radius-lg); font-size:13px; max-width:88%; margin-left:auto; word-break:break-word; line-height:1.6; }
+  .chat-msg.assistant .msg-content { background:var(--color-bg-input); padding:12px 16px; border-radius:var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px; font-size:13px; line-height:1.7; word-break:break-word; }
+  .chat-msg.assistant .msg-content p { margin-bottom:8px; }
+  .chat-msg.assistant .msg-content p:last-child { margin-bottom:0; }
+  .cursor-blink { animation:blink 1s step-end infinite; color:var(--color-primary); }
+  @keyframes blink { 50% { opacity:0; } }
+  .chat-input-area { padding:16px; border-top:1px solid var(--color-border); display:flex; flex-direction:column; gap:10px; }
+  .chat-input-area textarea { background:var(--color-bg-input); border:1px solid transparent; border-radius:var(--radius); color:var(--color-text); font-size:13px; padding:12px 14px; resize:none; font-family:var(--font-body); line-height:1.5; transition:all 0.2s; }
+  .chat-input-area textarea:focus { background:var(--color-bg-card); border-color:var(--color-primary); box-shadow:0 0 0 3px var(--color-primary-light); }
+  .chat-input-area textarea::placeholder { color:var(--color-text-muted); }
+  .btn-send { align-self:flex-end; background:var(--color-primary); color:#fff; padding:8px 24px; border-radius:var(--radius); font-size:13px; font-weight:500; transition:all 0.2s; }
+  .btn-send:hover { background:var(--color-primary-hover); box-shadow:var(--shadow-md); }
+</style>
+</head>
+<body>
+<div class="workspace">
+  <header class="ws-header">
+    <button class="btn-back">← 返回</button>
+    <h1>九州风云录</h1>
+    <span class="ws-type">小说</span>
+  </header>
+
+  <div class="ws-body">
+    <aside class="ws-sidebar">
+      <div class="sidebar-header">
+        <h3>章节</h3>
+        <button class="btn-add">+</button>
+      </div>
+      <div class="chapter-list">
+        <div class="chapter-item active">
+          <span>第一章 少年出山</span>
+          <span class="chapter-ver">v3</span>
+        </div>
+        <div class="chapter-item">
+          <span>第二章 初入仙门</span>
+          <span class="chapter-ver">v2</span>
+        </div>
+        <div class="chapter-item">
+          <span>第三章 灵根觉醒</span>
+          <span class="chapter-ver">v1</span>
+        </div>
+        <div class="chapter-item">
+          <span>第四章 秘境试炼</span>
+          <span class="chapter-ver">v1</span>
+        </div>
+        <div class="chapter-item">
+          <span>第五章 剑意初成</span>
+          <span class="chapter-ver">v1</span>
+        </div>
+        <div class="chapter-item">
+          <span>第六章 宗门大比</span>
+          <span class="chapter-ver">v1</span>
+        </div>
+        <div class="chapter-item">
+          <span>第七章 暗流涌动</span>
+          <span class="chapter-ver">v1</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="ws-editor">
+      <div class="editor-toolbar">
+        <input class="editor-title-input" value="第一章 少年出山" />
+        <button class="btn-save">保存</button>
+      </div>
+      <div class="editor-body">
+        <textarea class="editor-textarea" placeholder="开始写作，或在右侧与 AI 对话生成内容..."># 第一章 少年出山
+
+青云山脉绵延千里，山巅终年积雪不化，
+山腰处却有一座隐于云雾中的小村落——落霞村。
+
+村口的老槐树下，一个约莫十六七岁的少年
+正仰头望着天边的晚霞。他叫林远，是村里
+猎户林老汉的独子。
+
+"远儿，该回来了！"林老汉的声音从院子里传来。
+
+林远收回目光，拍了拍身上的草屑，朝家的
+方向走去。他不知道的是，明天一早，一位
+来自天剑宗的仙人将会路过落霞村，而他的
+命运，也将因此彻底改变。</textarea>
+        <div class="editor-preview">
+          <h1>第一章 少年出山</h1>
+          <p>青云山脉绵延千里，山巅终年积雪不化，山腰处却有一座隐于云雾中的小村落——落霞村。</p>
+          <p>村口的老槐树下，一个约莫十六七岁的少年正仰头望着天边的晚霞。他叫林远，是村里猎户林老汉的独子。</p>
+          <p>"远儿，该回来了！"林老汉的声音从院子里传来。</p>
+          <p>林远收回目光，拍了拍身上的草屑，朝家的方向走去。他不知道的是，明天一早，一位来自天剑宗的仙人将会路过落霞村，而他的命运，也将因此彻底改变。</p>
+        </div>
+      </div>
+    </main>
+
+    <aside class="ws-chat">
+      <div class="chat-header">
+        <h3>AI 创作助手</h3>
+      </div>
+      <div class="chat-messages">
+        <div class="chat-welcome">
+          <p>你好！我是你的 AI 创作助手。</p>
+          <p>你可以让我帮你：</p>
+          <ul>
+            <li>写章节内容</li>
+            <li>设计人物设定</li>
+            <li>续写或改写</li>
+            <li>构建故事大纲</li>
+          </ul>
+        </div>
+        <div class="chat-msg user">
+          <div class="msg-content">帮我写一段林远第一次见到仙人施展法术时的震撼场景</div>
+        </div>
+        <div class="chat-msg assistant">
+          <div class="msg-content">
+            <p>清晨的薄雾尚未散去，一道剑光自天际划过，如同流星坠落般直直地落在村口的空地上。</p>
+            <p>林远揉了揉惺忪的睡眼，以为自己还在做梦。然而那剑光散去后，一位白衣男子负手而立，衣袂无风自动，脚下的青石板竟出现了蛛网般的裂纹。</p>
+            <p>"这……这是……"林远张大了嘴，手中的柴刀险些滑落。</p>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea placeholder="输入创作指令... (Enter 发送, Shift+Enter 换行)" rows="3"></textarea>
+        <button class="btn-send">发送</button>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

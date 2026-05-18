@@ -121,7 +121,12 @@ export default function DashboardPage() {
     if (dirStatus === "invalid") { alert(dirError || "文件夹不可用"); return; }
     if (dirStatus !== "valid") {
       await verifyDirectory(newDirPath);
-      if (dirStatus === "invalid") return;
+      // Re-check after verification
+      const res2 = await client.post("/tasks/verify-directory", { path: newDirPath.trim() });
+      if (!res2.data.valid) {
+        alert(res2.data.error || "文件夹不可用");
+        return;
+      }
     }
     const payload: any = { title: newTitle, type: newType, description: newDesc, directory_path: newDirPath.trim() };
     if (selectedTemplate) payload.template_id = selectedTemplate;

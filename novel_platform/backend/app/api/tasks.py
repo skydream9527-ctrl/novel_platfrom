@@ -61,6 +61,79 @@ async def list_tasks(user=Depends(get_current_user), db: AsyncSession = Depends(
     ]
 
 
+class DirectoryRequest(BaseModel):
+    path: str
+
+
+@router.post("/verify-directory")
+async def verify_directory(req: DirectoryRequest, user=Depends(get_current_user)):
+    """验证目录路径是否存在且为空"""
+    dir_path = req.path.strip()
+    if not dir_path:
+        return {"valid": False, "error": "路径不能为空"}
+    p = Path(dir_path)
+    if not p.exists():
+        return {"valid": False, "error": "目录不存在，请先创建文件夹"}
+    if not p.is_dir():
+        return {"valid": False, "error": "路径不是一个文件夹"}
+    if any(p.iterdir()):
+        return {"valid": False, "error": "文件夹必须为空"}
+    return {"valid": True, "name": p.name}
+
+
+@router.post("/open-directory")
+async def open_directory(user=Depends(get_current_user)):
+    """打开系统文件夹选择对话框，返回选中的路径"""
+    import subprocess
+    import platform
+
+    try:
+        system = platform.system()
+        if system == "Darwin":
+            result = subprocess.run(
+                ["osascript", "-e", 'POSIX path of (choose folder with prompt "选择项目文件夹（必须为空）")'],
+                capture_output=True, text=True, timeout=60,
+            )
+        elif system == "Windows":
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "Add-Type -AssemblyName System.Windows.Forms; "
+                 "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                 "$f.Description = '选择项目文件夹（必须为空）'; "
+                 "$f.ShowNewFolderButton = $true; "
+                 "if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath }"],
+                capture_output=True, text=True, timeout=60,
+            )
+        else:
+            result = subprocess.run(
+                ["zenity", "--file-selection", "--directory", "--title=选择项目文件夹（必须为空）"],
+                capture_output=True, text=True, timeout=60,
+            )
+
+        if result.returncode != 0:
+            return {"selected": False, "error": "未选择文件夹"}
+
+        selected_path = result.stdout.strip()
+        if not selected_path:
+            return {"selected": False, "error": "未选择文件夹"}
+
+        # Verify it's empty
+        p = Path(selected_path)
+        if not p.is_dir():
+            return {"selected": False, "error": "选择的不是一个文件夹"}
+        if any(p.iterdir()):
+            return {"selected": False, "error": "文件夹必须为空，请选择一个空文件夹"}
+
+        return {"selected": True, "path": selected_path, "name": p.name}
+
+    except subprocess.TimeoutExpired:
+        return {"selected": False, "error": "选择超时"}
+    except FileNotFoundError:
+        return {"selected": False, "error": "系统不支持文件夹选择对话框，请手动输入路径"}
+    except Exception as e:
+        return {"selected": False, "error": str(e)}
+
+
 @router.post("/")
 async def create_task(req: TaskCreate, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     dir_path = req.directory_path.strip()

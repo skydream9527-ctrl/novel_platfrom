@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import settings
 from ..core.database import get_db
 from ..core.deps import get_current_user
 from ..models.models import Chapter, Note, Source, Task
@@ -177,3 +178,12 @@ async def recommend_sources(req: RecommendRequest, user=Depends(get_current_user
 
     result = await chat_once(messages)
     return {"result": result}
+
+
+@router.get("/models")
+async def get_available_models(user=Depends(get_current_user)):
+    """获取可用的模型列表"""
+    return {
+        "models": settings.available_models_list,
+        "default": settings.llm_model,
+    }

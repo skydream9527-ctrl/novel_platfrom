@@ -82,6 +82,15 @@ interface CategoryItem {
   sort_order: number;
 }
 
+interface ToolCallState {
+  call_id: string;
+  tool: string;
+  label: string;
+  args: Record<string, unknown>;
+  status: "running" | "success" | "error";
+  result?: Record<string, unknown>;
+}
+
 const SOURCE_ICONS: Record<string, string> = {
   text: "📝",
   file: "📄",
@@ -184,6 +193,7 @@ export default function WorkspacePage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [toolCalls, setToolCalls] = useState<ToolCallState[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -192,6 +202,9 @@ export default function WorkspacePage() {
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [chapterView, setChapterView] = useState<"list" | "timeline">("list");
   const [showGraphModal, setShowGraphModal] = useState(false);
+
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
 
   useEffect(() => {
     if (!taskId) return;
@@ -209,7 +222,19 @@ export default function WorkspacePage() {
       setCategories(res.data);
       if (res.data.length > 0) setExpandedCats(new Set([res.data[0].id]));
     });
+    client.get("/ai/models").then((res) => {
+      setAvailableModels(res.data.models);
+      setSelectedModel(res.data.default);
+    });
   }, [taskId]);
+
+  const refreshData = () => {
+    if (!taskId) return;
+    client.get(`/chapters/by-task/${taskId}`).then((res) => setChapters(res.data));
+    client.get(`/characters/by-task/${taskId}`).then((res) => setCharacters(res.data));
+    client.get(`/notes/by-task/${taskId}`).then((res) => setNotes(res.data));
+    client.get(`/sources/by-task/${taskId}`).then((res) => setSources(res.data));
+  };
 
   useEffect(() => {
     if (!task?.conversation_id) return;
@@ -596,12 +621,30 @@ export default function WorkspacePage() {
       if (data.type === "start") {
         setStreaming(true);
         setStreamContent("");
+        setToolCalls([]);
       } else if (data.type === "chunk") {
         setStreamContent((prev) => prev + data.content);
+      } else if (data.type === "tool_call") {
+        setToolCalls((prev) => [
+          ...prev,
+          { call_id: data.call_id, tool: data.tool, label: data.label, args: data.args, status: "running" },
+        ]);
+      } else if (data.type === "tool_result") {
+        setToolCalls((prev) =>
+          prev.map((tc) =>
+            tc.call_id === data.call_id
+              ? { ...tc, status: data.success ? "success" : "error", result: data.result }
+              : tc
+          )
+        );
+        if (data.success) {
+          refreshData();
+        }
       } else if (data.type === "done") {
         setStreaming(false);
         setMessages((prev) => [...prev, { role: "assistant", content: data.content }]);
         setStreamContent("");
+        setToolCalls([]);
       } else if (data.type === "suggestions") {
         setSuggestions(data.suggestions);
       }
@@ -623,9 +666,10 @@ export default function WorkspacePage() {
     if (!input.trim() || !wsRef.current || streaming) return;
     const content = input.trim();
     setMessages((prev) => [...prev, { role: "user", content }]);
-    wsRef.current.send(JSON.stringify({ content }));
+    wsRef.current.send(JSON.stringify({ content, model: selectedModel || undefined }));
     setInput("");
     setSuggestions([]);
+    setToolCalls([]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -994,6 +1038,17 @@ export default function WorkspacePage() {
         <aside className="ws-chat">
           <div className="chat-header">
             <h3>AI 创作助手</h3>
+            {availableModels.length > 0 && (
+              <select
+                className="model-selector"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+              >
+                {availableModels.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="chat-messages">
             {messages.length === 0 && (
@@ -1024,6 +1079,19 @@ export default function WorkspacePage() {
                 </div>
                 {msg.role === "assistant" && (
                   <button className="btn-ai-save" onClick={() => openAiSave(msg.content)} title="保存到文件">💾 保存到文件</button>
+                )}
+              </div>
+            ))}
+            {toolCalls.map((tc) => (
+              <div key={tc.call_id} className={`tool-call-card ${tc.status}`}>
+                <span className="tool-call-icon">
+                  {tc.status === "running" ? "⏳" : tc.status === "success" ? "✅" : "❌"}
+                </span>
+                <span className="tool-call-label">
+                  {tc.status === "running" ? `正在${tc.label}...` : tc.status === "success" ? `已${tc.label}` : `${tc.label}失败`}
+                </span>
+                {tc.result && !tc.result.success && (
+                  <span className="tool-call-error">{String(tc.result.error || "")}</span>
                 )}
               </div>
             ))}

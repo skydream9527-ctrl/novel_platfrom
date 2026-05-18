@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o"
+    llm_available_models: str = "gpt-4o,gpt-4o-mini,gpt-3.5-turbo"
+    llm_max_tool_rounds: int = 10
 
     # Bootstrap admin
     novel_bootstrap_admin_email: str = "admin@novel.com"
@@ -43,6 +45,10 @@ class Settings(BaseSettings):
     @property
     def llm_enabled(self) -> bool:
         return bool(self.llm_api_key)
+
+    @property
+    def available_models_list(self) -> list[str]:
+        return [m.strip() for m in self.llm_available_models.split(",") if m.strip()]
 
 
 settings = Settings()

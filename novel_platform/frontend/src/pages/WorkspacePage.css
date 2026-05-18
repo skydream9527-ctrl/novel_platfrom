@@ -587,6 +587,10 @@
 .chat-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .chat-header h3 {
@@ -595,6 +599,28 @@
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.model-selector {
+  padding: 6px 10px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  max-width: 180px;
+}
+
+.model-selector:hover {
+  border-color: var(--color-primary);
+}
+
+.model-selector:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .chat-messages {
@@ -1256,4 +1282,47 @@
   background: var(--color-bg-card);
   border-color: var(--color-primary);
   outline: none;
+}
+
+/* Tool call cards */
+.tool-call-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 6px;
+  animation: tool-call-in 0.2s ease;
+}
+.tool-call-card.running {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+.tool-call-card.success {
+  background: rgba(52, 168, 83, 0.08);
+  color: #34a853;
+  border: 1px solid rgba(52, 168, 83, 0.3);
+}
+.tool-call-card.error {
+  background: rgba(234, 67, 53, 0.08);
+  color: var(--color-error);
+  border: 1px solid rgba(234, 67, 53, 0.3);
+}
+.tool-call-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.tool-call-label {
+  font-weight: 500;
+}
+.tool-call-error {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-left: auto;
+}
+@keyframes tool-call-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }

@@ -30,6 +30,8 @@ export default function DashboardPage() {
   const [newType, setNewType] = useState("novel");
   const [newDesc, setNewDesc] = useState("");
   const [newDirPath, setNewDirPath] = useState("");
+  const [dirStatus, setDirStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [dirError, setDirError] = useState("");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -44,9 +46,42 @@ export default function DashboardPage() {
     client.get("/templates/").then((res) => setTemplates(res.data));
   }, []);
 
+  const verifyDirectory = async (path: string) => {
+    if (!path.trim()) { setDirStatus("idle"); setDirError(""); return; }
+    setDirStatus("checking");
+    try {
+      const res = await client.post("/tasks/verify-directory", { path: path.trim() });
+      if (res.data.valid) {
+        setDirStatus("valid");
+        setDirError("");
+      } else {
+        setDirStatus("invalid");
+        setDirError(res.data.error);
+      }
+    } catch {
+      setDirStatus("invalid");
+      setDirError("验证失败");
+    }
+  };
+
+  const handleBrowse = async () => {
+    try {
+      const res = await client.post("/tasks/open-directory");
+      if (res.data.selected) {
+        setNewDirPath(res.data.path);
+        setDirStatus("valid");
+        setDirError("");
+      }
+    } catch {
+      // Fallback: user can type the path manually
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDirPath.trim()) { alert("请输入本地空文件夹路径"); return; }
+    if (!newDirPath.trim()) { alert("请选择或输入本地空文件夹路径"); return; }
+    if (dirStatus === "invalid") { alert(dirError || "文件夹不可用"); return; }
+    if (dirStatus !== "valid") { await verifyDirectory(newDirPath); if (dirStatus === "invalid") return; }
     const payload: any = { title: newTitle, type: newType, description: newDesc, directory_path: newDirPath.trim() };
     if (selectedTemplate) payload.template_id = selectedTemplate;
     const res = await client.post("/tasks/", payload);
@@ -108,12 +143,20 @@ export default function DashboardPage() {
                 onChange={(e) => setNewDesc(e.target.value)}
                 rows={3}
               />
-              <input
-                placeholder="本地空文件夹路径（必填，如 /Users/gyh/Documents/my-novel）"
-                value={newDirPath}
-                onChange={(e) => setNewDirPath(e.target.value)}
-                required
-              />
+              <div className="dir-picker">
+                <input
+                  placeholder="本地空文件夹路径（必填）"
+                  value={newDirPath}
+                  onChange={(e) => { setNewDirPath(e.target.value); setDirStatus("idle"); }}
+                  onBlur={() => verifyDirectory(newDirPath)}
+                  className={dirStatus === "valid" ? "dir-valid" : dirStatus === "invalid" ? "dir-invalid" : ""}
+                  required
+                />
+                <button type="button" className="btn-browse" onClick={handleBrowse}>选择文件夹</button>
+              </div>
+              {dirStatus === "checking" && <div className="dir-hint">验证中...</div>}
+              {dirStatus === "valid" && <div className="dir-hint dir-hint-ok">文件夹可用</div>}
+              {dirStatus === "invalid" && <div className="dir-hint dir-hint-err">{dirError}</div>}
               {templates.length > 0 && (
                 <div className="template-selector">
                   <label style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 4 }}>选择模板（可选）</label>

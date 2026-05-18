@@ -67,13 +67,13 @@ export default function DashboardPage() {
   const handleBrowse = async () => {
     // Prompt user to enter path with helpful examples
     const homeDir = "/Users/" + (navigator.platform.includes("Mac") ? "gyh" : "user");
-    const examplePath = `${homeDir}/Desktop/novel/my-project`;
+    const examplePath = homeDir + "/Desktop/novel/my-project";
     const path = prompt(
       "请输入本地空文件夹的完整路径：\n\n" +
       "示例：\n" +
-      `${homeDir}/Desktop/novel/my-project\n` +
-      `${homeDir}/Documents/stories/my-story\n\n` +
-      "提示：文件夹必须为空且已存在`,
+      homeDir + "/Desktop/novel/my-project\n" +
+      homeDir + "/Documents/stories/my-story\n\n" +
+      "提示：文件夹必须为空且已存在",
       examplePath
     );
     if (path && path.trim()) {
@@ -86,7 +86,10 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newDirPath.trim()) { alert("请选择或输入本地空文件夹路径"); return; }
     if (dirStatus === "invalid") { alert(dirError || "文件夹不可用"); return; }
-    if (dirStatus !== "valid") { await verifyDirectory(newDirPath); if (dirStatus === "invalid") return; }
+    if (dirStatus !== "valid") {
+      await verifyDirectory(newDirPath);
+      if (dirStatus === "invalid") return;
+    }
     const payload: any = { title: newTitle, type: newType, description: newDesc, directory_path: newDirPath.trim() };
     if (selectedTemplate) payload.template_id = selectedTemplate;
     const res = await client.post("/tasks/", payload);

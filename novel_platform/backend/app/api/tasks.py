@@ -81,6 +81,42 @@ async def verify_directory(req: DirectoryRequest, user=Depends(get_current_user)
     return {"valid": True, "name": p.name}
 
 
+class BrowseRequest(BaseModel):
+    path: str = ""
+
+
+@router.post("/browse-directory")
+async def browse_directory(req: BrowseRequest, user=Depends(get_current_user)):
+    """列出指定目录下的子文件夹"""
+    import os
+
+    # Default to home directory
+    if not req.path.strip():
+        base_path = Path.home()
+    else:
+        base_path = Path(req.path.strip())
+
+    if not base_path.exists() or not base_path.is_dir():
+        return {"error": "目录不存在", "current": str(base_path), "folders": []}
+
+    folders = []
+    try:
+        for item in sorted(base_path.iterdir()):
+            if item.is_dir() and not item.name.startswith("."):
+                folders.append({
+                    "name": item.name,
+                    "path": str(item),
+                })
+    except PermissionError:
+        return {"error": "无权限访问", "current": str(base_path), "folders": []}
+
+    return {
+        "current": str(base_path),
+        "parent": str(base_path.parent) if base_path.parent != base_path else None,
+        "folders": folders[:50],  # Limit to 50 folders
+    }
+
+
 @router.post("/open-directory")
 async def open_directory(user=Depends(get_current_user)):
     """打开系统文件夹选择对话框，返回选中的路径"""

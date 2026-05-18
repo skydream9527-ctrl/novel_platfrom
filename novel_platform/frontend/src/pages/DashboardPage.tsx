@@ -23,6 +23,11 @@ interface Template {
   content: string;
 }
 
+interface FolderItem {
+  name: string;
+  path: string;
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -35,6 +40,14 @@ export default function DashboardPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const navigate = useNavigate();
+
+  // Folder browser state
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [browserPath, setBrowserPath] = useState("");
+  const [browserParent, setBrowserParent] = useState<string | null>(null);
+  const [browserFolders, setBrowserFolders] = useState<FolderItem[]>([]);
+  const [browserLoading, setBrowserLoading] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   const loadTasks = async () => {
     const res = await client.get("/tasks/");
@@ -64,22 +77,42 @@ export default function DashboardPage() {
     }
   };
 
-  const handleBrowse = async () => {
-    // Prompt user to enter path with helpful examples
-    const homeDir = "/Users/" + (navigator.platform.includes("Mac") ? "gyh" : "user");
-    const examplePath = homeDir + "/Desktop/novel/my-project";
-    const path = prompt(
-      "请输入本地空文件夹的完整路径：\n\n" +
-      "示例：\n" +
-      homeDir + "/Desktop/novel/my-project\n" +
-      homeDir + "/Documents/stories/my-story\n\n" +
-      "提示：文件夹必须为空且已存在",
-      examplePath
-    );
-    if (path && path.trim()) {
-      setNewDirPath(path.trim());
-      verifyDirectory(path.trim());
+  const browseDirectory = async (path: string) => {
+    setBrowserLoading(true);
+    try {
+      const res = await client.post("/tasks/browse-directory", { path });
+      setBrowserPath(res.data.current);
+      setBrowserParent(res.data.parent);
+      setBrowserFolders(res.data.folders || []);
+    } catch {
+      setBrowserFolders([]);
+    } finally {
+      setBrowserLoading(false);
     }
+  };
+
+  const openBrowser = () => {
+    setShowBrowser(true);
+    setNewFolderName("");
+    browseDirectory(""); // Start from home directory
+  };
+
+  const selectFolder = (folderPath: string) => {
+    setNewDirPath(folderPath);
+    setShowBrowser(false);
+    verifyDirectory(folderPath);
+  };
+
+  const navigateTo = (path: string) => {
+    setNewFolderName("");
+    browseDirectory(path);
+  };
+
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) return;
+    const newPath = browserPath + "/" + newFolderName.trim();
+    // Just set the path, backend will create it when task is created
+    selectFolder(newPath);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -160,7 +193,7 @@ export default function DashboardPage() {
                   className={dirStatus === "valid" ? "dir-valid" : dirStatus === "invalid" ? "dir-invalid" : ""}
                   required
                 />
-                <button type="button" className="btn-browse" onClick={handleBrowse}>选择文件夹</button>
+                <button type="button" className="btn-browse" onClick={openBrowser}>选择文件夹</button>
               </div>
               {dirStatus === "checking" && <div className="dir-hint">验证中...</div>}
               {dirStatus === "valid" && <div className="dir-hint dir-hint-ok">文件夹可用</div>}
@@ -215,6 +248,67 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* Folder Browser Modal */}
+      {showBrowser && (
+        <div className="modal-overlay" onClick={() => setShowBrowser(false)}>
+          <div className="modal-card folder-browser" onClick={(e) => e.stopPropagation()}>
+            <h3>选择文件夹</h3>
+            <div className="browser-path">
+              <span className="browser-current">{browserPath}</span>
+            </div>
+            <div className="browser-actions">
+              {browserParent && (
+                <button className="btn-up" onClick={() => navigateTo(browserParent)}>
+                  ⬆️ 上级目录
+                </button>
+              )}
+              <div className="new-folder-row">
+                <input
+                  placeholder="新建文件夹名称"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createNewFolder())}
+                />
+                <button className="btn-create-folder" onClick={createNewFolder} disabled={!newFolderName.trim()}>
+                  新建
+                </button>
+              </div>
+            </div>
+            <div className="browser-list">
+              {browserLoading ? (
+                <div className="browser-loading">加载中...</div>
+              ) : browserFolders.length === 0 ? (
+                <div className="browser-empty">
+                  <p>此目录下没有子文件夹</p>
+                  <p className="browser-hint">可以输入新文件夹名称并点击「新建」</p>
+                </div>
+              ) : (
+                browserFolders.map((folder) => (
+                  <div
+                    key={folder.path}
+                    className="browser-item"
+                    onClick={() => navigateTo(folder.path)}
+                    onDoubleClick={() => selectFolder(folder.path)}
+                  >
+                    <span className="browser-icon">📁</span>
+                    <span className="browser-name">{folder.name}</span>
+                    <button
+                      className="btn-select-folder"
+                      onClick={(e) => { e.stopPropagation(); selectFolder(folder.path); }}
+                    >
+                      选择
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setShowBrowser(false)}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -90,9 +90,11 @@ async def open_directory(user=Depends(get_current_user)):
     try:
         system = platform.system()
         if system == "Darwin":
+            # On macOS, we need to allow stdin for the dialog
             result = subprocess.run(
                 ["osascript", "-e", 'POSIX path of (choose folder with prompt "选择项目文件夹（必须为空）")'],
                 capture_output=True, text=True, timeout=60,
+                stdin=subprocess.DEVNULL,
             )
         elif system == "Windows":
             result = subprocess.run(
@@ -103,11 +105,13 @@ async def open_directory(user=Depends(get_current_user)):
                  "$f.ShowNewFolderButton = $true; "
                  "if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath }"],
                 capture_output=True, text=True, timeout=60,
+                stdin=subprocess.DEVNULL,
             )
         else:
             result = subprocess.run(
                 ["zenity", "--file-selection", "--directory", "--title=选择项目文件夹（必须为空）"],
                 capture_output=True, text=True, timeout=60,
+                stdin=subprocess.DEVNULL,
             )
 
         if result.returncode != 0:

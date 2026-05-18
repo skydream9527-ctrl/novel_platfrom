@@ -65,15 +65,20 @@ export default function DashboardPage() {
   };
 
   const handleBrowse = async () => {
-    try {
-      const res = await client.post("/tasks/open-directory");
-      if (res.data.selected) {
-        setNewDirPath(res.data.path);
-        setDirStatus("valid");
-        setDirError("");
-      }
-    } catch {
-      // Fallback: user can type the path manually
+    // Prompt user to enter path with helpful examples
+    const homeDir = "/Users/" + (navigator.platform.includes("Mac") ? "gyh" : "user");
+    const examplePath = `${homeDir}/Desktop/novel/my-project`;
+    const path = prompt(
+      "请输入本地空文件夹的完整路径：\n\n" +
+      "示例：\n" +
+      `${homeDir}/Desktop/novel/my-project\n` +
+      `${homeDir}/Documents/stories/my-story\n\n` +
+      "提示：文件夹必须为空且已存在`,
+      examplePath
+    );
+    if (path && path.trim()) {
+      setNewDirPath(path.trim());
+      verifyDirectory(path.trim());
     }
   };
 

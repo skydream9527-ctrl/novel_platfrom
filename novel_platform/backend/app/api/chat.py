@@ -128,16 +128,25 @@ async def ws_conversation(websocket: WebSocket, conversation_id: int):
 
             for _round in range(max_rounds):
                 tool_calls_this_round = []
+                round_reasoning_content = None
 
                 async for event in chat_with_tools(messages, TOOLS, model=model):
                     if event["type"] == "text":
                         full_response.append(event["content"])
                         await websocket.send_json({"type": "chunk", "content": event["content"]})
 
+                    elif event["type"] == "reasoning":
+                        # Accumulate reasoning content for thinking mode models
+                        if round_reasoning_content is None:
+                            round_reasoning_content = ""
+                        round_reasoning_content += event["content"]
+
                     elif event["type"] == "tool_call":
                         tool_name = event["name"]
                         tool_args = event["arguments"]
                         call_id = event["id"] or str(uuid.uuid4())
+                        if event.get("reasoning_content"):
+                            round_reasoning_content = event["reasoning_content"]
 
                         label = TOOL_LABELS.get(tool_name, tool_name)
                         await websocket.send_json({
@@ -179,11 +188,15 @@ async def ws_conversation(websocket: WebSocket, conversation_id: int):
                             "arguments": json.dumps(tc["args"], ensure_ascii=False),
                         },
                     })
-                messages.append({
+                assistant_msg: dict = {
                     "role": "assistant",
                     "content": None,
                     "tool_calls": assistant_tool_calls,
-                })
+                }
+                # mimo-v2.5-pro thinking mode requires reasoning_content to be passed back
+                if round_reasoning_content:
+                    assistant_msg["reasoning_content"] = round_reasoning_content
+                messages.append(assistant_msg)
                 for tc in tool_calls_this_round:
                     messages.append({
                         "role": "tool",

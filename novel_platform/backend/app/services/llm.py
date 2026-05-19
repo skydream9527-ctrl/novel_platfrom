@@ -148,6 +148,9 @@ async def _openai_stream(messages: list[dict], model: str) -> AsyncGenerator[str
                 try:
                     obj = json.loads(data)
                     delta = obj["choices"][0].get("delta", {})
+                    # Skip reasoning_content chunks (thinking mode)
+                    if "reasoning_content" in delta:
+                        continue
                     content = delta.get("content", "")
                     if content:
                         yield content
@@ -174,6 +177,7 @@ async def _openai_stream_with_tools(
     }
 
     tool_calls: dict[int, dict] = {}
+    reasoning_content_parts: list[str] = []
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream(
@@ -200,6 +204,13 @@ async def _openai_stream_with_tools(
                     choice = obj["choices"][0]
                     delta = choice.get("delta", {})
 
+                    # Extract reasoning_content (mimo thinking mode)
+                    reasoning = delta.get("reasoning_content", "")
+                    if reasoning:
+                        reasoning_content_parts.append(reasoning)
+                        yield {"type": "reasoning", "content": reasoning}
+                        continue
+
                     content = delta.get("content", "")
                     if content:
                         yield {"type": "text", "content": content}
@@ -220,18 +231,23 @@ async def _openai_stream_with_tools(
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
 
+    full_reasoning = "".join(reasoning_content_parts) if reasoning_content_parts else None
+
     for idx in sorted(tool_calls.keys()):
         tc = tool_calls[idx]
         try:
             args = json.loads(tc["arguments_buf"]) if tc["arguments_buf"] else {}
         except json.JSONDecodeError:
             args = {}
-        yield {
+        event: dict = {
             "type": "tool_call",
             "id": tc["id"],
             "name": tc["name"],
             "arguments": args,
         }
+        if full_reasoning:
+            event["reasoning_content"] = full_reasoning
+        yield event
 
 
 async def _anthropic_stream(

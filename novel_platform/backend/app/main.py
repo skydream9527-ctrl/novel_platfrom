@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import admin, auth, categories, chapters, chat, conversations, notes, search, sources, summaries, templates, tasks, ai_actions, characters
+from .api import admin, auth, categories, chapters, chat, conversations, notes, search, sources, summaries, templates, tasks, ai_actions, characters, links, tags, writing, attributes, graph, outline, timeline, comments, worldbuilding, conflicts
 from .core.config import settings
 from .core.database import init_db
 from .seed import bootstrap
@@ -45,6 +45,16 @@ app.include_router(characters.router, prefix="/api/v1")
 app.include_router(notes.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
+app.include_router(links.router, prefix="/api/v1")
+app.include_router(tags.router, prefix="/api/v1")
+app.include_router(writing.router, prefix="/api/v1")
+app.include_router(attributes.router, prefix="/api/v1")
+app.include_router(graph.router, prefix="/api/v1")
+app.include_router(outline.router, prefix="/api/v1")
+app.include_router(timeline.router, prefix="/api/v1")
+app.include_router(comments.router, prefix="/api/v1")
+app.include_router(worldbuilding.router, prefix="/api/v1")
+app.include_router(conflicts.router, prefix="/api/v1")
 
 
 @app.get("/api/v1/health")

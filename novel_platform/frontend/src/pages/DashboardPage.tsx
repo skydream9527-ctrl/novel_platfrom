@@ -81,10 +81,18 @@ export default function DashboardPage() {
     setBrowserLoading(true);
     try {
       const res = await client.post("/tasks/browse-directory", { path });
-      setBrowserPath(res.data.current);
+      console.log("browse-directory 返回:", res.data);
+      if (res.data.error) {
+        console.error("browse-directory 错误:", res.data.error);
+        alert(`浏览目录失败: ${res.data.error}`);
+      }
+      setBrowserPath(res.data.current || "");
       setBrowserParent(res.data.parent);
       setBrowserFolders(res.data.folders || []);
-    } catch {
+    } catch (err: any) {
+      console.error("browse-directory 请求失败:", err);
+      const errorMsg = err.response?.data?.detail || err.message || "浏览目录失败";
+      alert(`浏览目录失败: ${errorMsg}`);
       setBrowserFolders([]);
     } finally {
       setBrowserLoading(false);
@@ -92,12 +100,14 @@ export default function DashboardPage() {
   };
 
   const openBrowser = () => {
+    // 直接打开 Web 文件夹浏览器，不依赖系统对话框
     setShowBrowser(true);
     setNewFolderName("");
-    browseDirectory(""); // Start from home directory
+    browseDirectory("");
   };
 
   const selectFolder = (folderPath: string) => {
+    console.log("selectFolder 被调用, folderPath:", folderPath);
     setNewDirPath(folderPath);
     setShowBrowser(false);
     verifyDirectory(folderPath);
@@ -110,9 +120,28 @@ export default function DashboardPage() {
 
   const createNewFolder = async () => {
     if (!newFolderName.trim()) return;
-    const newPath = browserPath + "/" + newFolderName.trim();
-    // Just set the path, backend will create it when task is created
-    selectFolder(newPath);
+    // 使用 Path.join 的逻辑，确保跨平台兼容
+    const separator = browserPath.includes("\\") ? "\\" : "/";
+    const newPath = browserPath.endsWith(separator)
+      ? browserPath + newFolderName.trim()
+      : browserPath + separator + newFolderName.trim();
+    console.log("创建文件夹:", { browserPath, newFolderName: newFolderName.trim(), newPath });
+    setBrowserLoading(true);
+    try {
+      const res = await client.post("/tasks/create-directory", { path: newPath });
+      console.log("创建文件夹响应:", res.data);
+      if (res.data.ok) {
+        selectFolder(res.data.path);
+      } else {
+        alert(res.data.error || "创建文件夹失败");
+      }
+    } catch (err: any) {
+      console.error("创建文件夹请求失败:", err);
+      const errorMsg = err.response?.data?.detail || err.message || "创建文件夹失败";
+      alert(`创建文件夹失败: ${errorMsg}`);
+    } finally {
+      setBrowserLoading(false);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -268,6 +297,12 @@ export default function DashboardPage() {
                   ⬆️ 上级目录
                 </button>
               )}
+              <button className="btn-select-current" onClick={() => {
+                console.log("选择当前目录按钮被点击, browserPath:", browserPath);
+                selectFolder(browserPath);
+              }}>
+                选择当前目录
+              </button>
               <div className="new-folder-row">
                 <input
                   placeholder="新建文件夹名称"

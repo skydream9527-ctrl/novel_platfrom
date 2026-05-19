@@ -1,3 +1,4 @@
+import asyncio
 import re
 import shutil
 from pathlib import Path
@@ -67,7 +68,7 @@ class DirectoryRequest(BaseModel):
 
 @router.post("/verify-directory")
 async def verify_directory(req: DirectoryRequest, user=Depends(get_current_user)):
-    """验证目录路径是否存在且为空"""
+    """验证目录路径是否存在"""
     dir_path = req.path.strip()
     if not dir_path:
         return {"valid": False, "error": "路径不能为空"}
@@ -76,8 +77,6 @@ async def verify_directory(req: DirectoryRequest, user=Depends(get_current_user)
         return {"valid": False, "error": "目录不存在，请先创建文件夹"}
     if not p.is_dir():
         return {"valid": False, "error": "路径不是一个文件夹"}
-    if any(p.iterdir()):
-        return {"valid": False, "error": "文件夹必须为空"}
     return {"valid": True, "name": p.name}
 
 
@@ -117,52 +116,88 @@ async def browse_directory(req: BrowseRequest, user=Depends(get_current_user)):
     }
 
 
-@router.post("/open-directory")
-async def open_directory(user=Depends(get_current_user)):
-    """打开系统文件夹选择对话框，返回选中的路径"""
+class CreateDirectoryRequest(BaseModel):
+    path: str
+
+
+@router.post("/create-directory")
+async def create_directory(req: CreateDirectoryRequest, user=Depends(get_current_user)):
+    """在指定路径下创建新目录"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    dir_path = req.path.strip()
+    logger.info(f"创建目录请求: path={dir_path}, user={user.id}")
+
+    if not dir_path:
+        logger.warning("路径为空")
+        return {"ok": False, "error": "路径不能为空"}
+
+    p = Path(dir_path)
+    logger.info(f"解析路径: {p}, parent={p.parent}, parent_exists={p.parent.exists()}")
+
+    if p.exists():
+        logger.warning(f"目录已存在: {p}")
+        return {"ok": False, "error": "目录已存在"}
+
+    try:
+        p.mkdir(parents=True, exist_ok=False)
+        logger.info(f"目录创建成功: {p}")
+        return {"ok": True, "path": str(p), "name": p.name}
+    except PermissionError as e:
+        logger.error(f"权限不足: {e}")
+        return {"ok": False, "error": "权限不足，无法创建目录"}
+    except OSError as e:
+        logger.error(f"创建目录失败: {e}")
+        return {"ok": False, "error": f"创建失败: {e}"}
+
+
+def _open_directory_sync():
+    """同步方式打开系统文件夹选择对话框（在线程池中运行，不阻塞事件循环）"""
     import subprocess
     import platform
 
     try:
         system = platform.system()
         if system == "Darwin":
-            # On macOS, we need to allow stdin for the dialog
+            script = '''
+            tell application "Finder"
+                activate
+                set folderPath to POSIX path of (choose folder with prompt "选择项目文件夹")
+            end tell
+            '''
             result = subprocess.run(
-                ["osascript", "-e", 'POSIX path of (choose folder with prompt "选择项目文件夹（必须为空）")'],
-                capture_output=True, text=True, timeout=60,
-                stdin=subprocess.DEVNULL,
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=120,
             )
         elif system == "Windows":
             result = subprocess.run(
                 ["powershell", "-Command",
                  "Add-Type -AssemblyName System.Windows.Forms; "
                  "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
-                 "$f.Description = '选择项目文件夹（必须为空）'; "
+                 "$f.Description = '选择项目文件夹'; "
                  "$f.ShowNewFolderButton = $true; "
                  "if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath }"],
-                capture_output=True, text=True, timeout=60,
-                stdin=subprocess.DEVNULL,
+                capture_output=True, text=True, timeout=120,
             )
         else:
             result = subprocess.run(
-                ["zenity", "--file-selection", "--directory", "--title=选择项目文件夹（必须为空）"],
-                capture_output=True, text=True, timeout=60,
-                stdin=subprocess.DEVNULL,
+                ["zenity", "--file-selection", "--directory", "--title=选择项目文件夹"],
+                capture_output=True, text=True, timeout=120,
             )
 
         if result.returncode != 0:
-            return {"selected": False, "error": "未选择文件夹"}
+            error_msg = result.stderr.strip() if result.stderr else "未选择文件夹"
+            return {"selected": False, "error": error_msg}
 
         selected_path = result.stdout.strip()
         if not selected_path:
             return {"selected": False, "error": "未选择文件夹"}
 
-        # Verify it's empty
+        selected_path = selected_path.rstrip("/\n\r")
         p = Path(selected_path)
         if not p.is_dir():
             return {"selected": False, "error": "选择的不是一个文件夹"}
-        if any(p.iterdir()):
-            return {"selected": False, "error": "文件夹必须为空，请选择一个空文件夹"}
 
         return {"selected": True, "path": selected_path, "name": p.name}
 
@@ -174,20 +209,33 @@ async def open_directory(user=Depends(get_current_user)):
         return {"selected": False, "error": str(e)}
 
 
+@router.post("/open-directory")
+async def open_directory(user=Depends(get_current_user)):
+    """打开系统文件夹选择对话框，返回选中的路径（通过线程池执行，不阻塞事件循环）"""
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _open_directory_sync)
+    return result
+
+
 @router.post("/")
 async def create_task(req: TaskCreate, user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     dir_path = req.directory_path.strip()
     if not dir_path:
         raise HTTPException(status_code=400, detail="目录路径不能为空")
 
-    # Validate directory exists and is empty
+    # Validate directory exists
     p = Path(dir_path)
     if not p.exists():
         raise HTTPException(status_code=400, detail="目录不存在，请先创建文件夹")
     if not p.is_dir():
         raise HTTPException(status_code=400, detail="路径不是一个文件夹")
-    if any(p.iterdir()):
-        raise HTTPException(status_code=400, detail="文件夹必须为空")
+
+    # 检查是否已经被其他任务使用
+    existing_task = await db.execute(
+        select(Task).where(Task.directory_path == dir_path)
+    )
+    if existing_task.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="该文件夹已被其他任务使用")
 
     task = Task(
         owner_id=user.id,

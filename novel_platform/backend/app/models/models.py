@@ -55,6 +55,9 @@ class Chapter(Base):
     content = Column(Text, default="")
     order_index = Column(Integer, default=0)
     version = Column(Integer, default=1)
+    status = Column(String(20), default="draft")  # idea / outline / draft / revision / final
+    scheduled_date = Column(DateTime, nullable=True)  # 计划完成日期
+    completed_date = Column(DateTime, nullable=True)  # 实际完成日期
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -178,3 +181,292 @@ class SourceReference(Base):
 
     source = relationship("Source")
     message = relationship("Message")
+
+
+from sqlalchemy import UniqueConstraint
+
+
+class Link(Base):
+    """双向链接关系表"""
+    __tablename__ = "links"
+    __table_args__ = (
+        UniqueConstraint('task_id', 'source_type', 'source_id', 'target_type', 'target_id', name='uq_link'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    source_type = Column(String(20), nullable=False)  # chapter / note / character / source
+    source_id = Column(Integer, nullable=False)
+    target_type = Column(String(20), nullable=False)  # chapter / note / character / source
+    target_id = Column(Integer, nullable=False)
+    anchor_text = Column(String(500))  # 链接显示文本
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+
+
+class Tag(Base):
+    """标签表"""
+    __tablename__ = "tags"
+    __table_args__ = (
+        UniqueConstraint('task_id', 'name', name='uq_tag'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    name = Column(String(50), nullable=False)
+    color = Column(String(7))  # HEX颜色值
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+    content_tags = relationship("ContentTag", back_populates="tag", cascade="all, delete-orphan")
+
+
+class ContentTag(Base):
+    """内容标签关联表"""
+    __tablename__ = "content_tags"
+    __table_args__ = (
+        UniqueConstraint('tag_id', 'content_type', 'content_id', name='uq_content_tag'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tag_id = Column(Integer, ForeignKey("tags.id"), nullable=False)
+    content_type = Column(String(20), nullable=False)  # chapter / note / source
+    content_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    tag = relationship("Tag", back_populates="content_tags")
+
+
+class WritingGoal(Base):
+    """写作目标表"""
+    __tablename__ = "writing_goals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    goal_type = Column(String(20), nullable=False)  # daily / weekly / total
+    target_words = Column(Integer, nullable=False)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+
+
+class WritingLog(Base):
+    """写作记录表"""
+    __tablename__ = "writing_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"))
+    words_written = Column(Integer, nullable=False)
+    duration_seconds = Column(Integer)
+    recorded_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+    chapter = relationship("Chapter")
+
+
+class AttributeDefinition(Base):
+    """属性定义表"""
+    __tablename__ = "attribute_definitions"
+    __table_args__ = (
+        UniqueConstraint('task_id', 'name', name='uq_attribute_def'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    name = Column(String(50), nullable=False)
+    field_type = Column(String(20), nullable=False)  # text / number / select / multi_select / date / checkbox / url
+    options = Column(Text)  # JSON数组，select/multi_select的选项
+    default_value = Column(Text)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+
+
+class AttributeValue(Base):
+    """属性值表"""
+    __tablename__ = "attribute_values"
+    __table_args__ = (
+        UniqueConstraint('definition_id', 'chapter_id', name='uq_attribute_val'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    definition_id = Column(Integer, ForeignKey("attribute_definitions.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
+    value = Column(Text)
+    created_at = Column(DateTime, default=utcnow)
+
+    definition = relationship("AttributeDefinition")
+    chapter = relationship("Chapter")
+
+
+class OutlineNode(Base):
+    """大纲节点表"""
+    __tablename__ = "outline_nodes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("outline_nodes.id"), nullable=True)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    title = Column(String(200), nullable=False)
+    summary = Column(Text, default="")
+    node_type = Column(String(20), default="node")  # root / act / chapter / scene / node
+    sort_order = Column(Integer, default=0)
+    is_collapsed = Column(Integer, default=0)  # 0=False, 1=True
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    parent = relationship("OutlineNode", remote_side=[id], backref="children")
+    chapter = relationship("Chapter")
+
+
+class TimelineEvent(Base):
+    """时间线事件表"""
+    __tablename__ = "timeline_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    event_type = Column(String(20), default="scene")  # scene / plot / background / flashback
+    story_date = Column(String(100), default="")
+    story_date_order = Column(Integer, default=0)
+    duration = Column(String(100), default="")
+    location = Column(String(200), default="")
+    characters = Column(Text, default="[]")  # JSON数组，角色ID列表
+    is_milestone = Column(Integer, default=0)  # 0=False, 1=True
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    chapter = relationship("Chapter")
+
+
+class Comment(Base):
+    """评论表"""
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    comment_type = Column(String(20), default="general")  # general / suggestion / issue / praise / ai
+    status = Column(String(20), default="open")  # open / resolved / wontfix
+    selection_start = Column(Integer, nullable=True)
+    selection_end = Column(Integer, nullable=True)
+    selected_text = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    chapter = relationship("Chapter")
+    parent = relationship("Comment", remote_side=[id], backref="replies")
+    author = relationship("User")
+
+
+class WorldbuildingCategory(Base):
+    """世界观分类表"""
+    __tablename__ = "worldbuilding_categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    name = Column(String(50), nullable=False)
+    icon = Column(String(10), default="📁")
+    description = Column(Text, default="")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+    entries = relationship("WorldbuildingEntry", back_populates="category", cascade="all, delete-orphan")
+
+
+class WorldbuildingEntry(Base):
+    """世界观条目表"""
+    __tablename__ = "worldbuilding_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    category_id = Column(Integer, ForeignKey("worldbuilding_categories.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, default="")
+    attributes = Column(Text, default="{}")  # JSON格式的自定义属性
+    related_entries = Column(Text, default="[]")  # JSON数组，关联的其他条目ID
+    related_characters = Column(Text, default="[]")  # JSON数组，关联的角色ID
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    category = relationship("WorldbuildingCategory", back_populates="entries")
+
+
+class Conflict(Base):
+    """冲突表"""
+    __tablename__ = "conflicts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    conflict_type = Column(String(20), default="external")  # external / internal / interpersonal
+    status = Column(String(20), default="introduced")  # introduced / developing / climax / resolved
+    priority = Column(String(10), default="medium")  # high / medium / low
+    introduced_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    resolved_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    related_characters = Column(Text, default="[]")  # JSON数组，相关角色ID
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    introduced_chapter = relationship("Chapter", foreign_keys=[introduced_chapter_id])
+    resolved_chapter = relationship("Chapter", foreign_keys=[resolved_chapter_id])
+
+
+class Foreshadowing(Base):
+    """伏笔表"""
+    __tablename__ = "foreshadowing"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    foreshadowing_type = Column(String(20), default="plot")  # plot / character / world / item
+    status = Column(String(20), default="planted")  # planted / hinted / revealed / resolved
+    planted_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    revealed_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    hints = Column(Text, default="[]")  # JSON数组，包含{chapter_id, description}的提示列表
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    task = relationship("Task")
+    planted_chapter = relationship("Chapter", foreign_keys=[planted_chapter_id])
+    revealed_chapter = relationship("Chapter", foreign_keys=[revealed_chapter_id])
+
+
+class Annotation(Base):
+    """审阅标注表"""
+    __tablename__ = "annotations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    annotation_type = Column(String(20), nullable=False)  # highlight / underline / strikethrough / wavy / margin_note
+    color = Column(String(7), nullable=True)
+    selection_start = Column(Integer, nullable=False)
+    selection_end = Column(Integer, nullable=False)
+    selected_text = Column(Text, nullable=True)
+    note = Column(Text, nullable=True)
+    suggestion = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+    chapter = relationship("Chapter")
+    user = relationship("User")

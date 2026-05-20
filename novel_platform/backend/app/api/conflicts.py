@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import get_db
 from ..core.deps import get_current_user
-from ..models.models import Conflict, Foreshadowing, Task, Chapter, Character
+from ..models.models import Annotation, Chapter, Character, Conflict, Foreshadowing, Task, User
 
 router = APIRouter(prefix="/conflicts", tags=["conflicts"])
 

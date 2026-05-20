@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,6 +25,12 @@ interface TaskDetail {
   conversation_id: number;
 }
 
+interface ConversationItem {
+  id: number;
+  title: string;
+  created_at: string;
+}
+
 interface Message {
   id?: number;
   role: "user" | "assistant" | "system";
@@ -38,6 +44,8 @@ interface SourceItem {
   type: string;
   word_count: number;
   usage_count?: number;
+  summary?: string;
+  keywords?: string;
   created_at: string;
 }
 
@@ -187,6 +195,8 @@ export default function WorkspacePage() {
 
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [citationPopover, setCitationPopover] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [showSourceDetail, setShowSourceDetail] = useState<SourceItem | null>(null);
+  const [sourceDetailContent, setSourceDetailContent] = useState<string>("");
   const [showGenerateMenu, setShowGenerateMenu] = useState(false);
   const [generateLoading, setGenerateLoading] = useState(false);
   const [generateResult, setGenerateResult] = useState("");
@@ -200,11 +210,27 @@ export default function WorkspacePage() {
   const [recommendResult, setRecommendResult] = useState("");
   const [showRecommendModal, setShowRecommendModal] = useState(false);
   const [recommendLoading, setRecommendLoading] = useState(false);
-  const [chapterView, setChapterView] = useState<"list" | "timeline">("list");
+  const [chapterView, setChapterView] = useState<"list" | "timeline" | "outline">("list");
   const [showGraphModal, setShowGraphModal] = useState(false);
+  const [chapterOutline, setChapterOutline] = useState<{ level: number; title: string; line: number }[]>([]);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [writingGoal, setWritingGoal] = useState<number>(() => {
+    const saved = localStorage.getItem("writingGoal");
+    return saved ? parseInt(saved) : 1000;
+  });
+  const [dailyWordCount, setDailyWordCount] = useState<number>(0);
+  const [showReminder, setShowReminder] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState("");
+  const [showDiffModal, setShowDiffModal] = useState(false);
+  const [diffVersion1, setDiffVersion1] = useState<number | null>(null);
+  const [diffVersion2, setDiffVersion2] = useState<number | null>(null);
+  const [diffContent, setDiffContent] = useState<{ v1: string; v2: string } | null>(null);
 
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const [showConversationList, setShowConversationList] = useState(false);
 
   useEffect(() => {
     if (!taskId) return;
@@ -226,6 +252,13 @@ export default function WorkspacePage() {
       setAvailableModels(res.data.models);
       setSelectedModel(res.data.default);
     });
+    // Load conversations
+    client.get(`/conversations/by-task/${taskId}`).then((res) => {
+      setConversations(res.data);
+      if (res.data.length > 0) {
+        setActiveConversationId(res.data[0].id);
+      }
+    });
   }, [taskId]);
 
   const refreshData = () => {
@@ -237,9 +270,38 @@ export default function WorkspacePage() {
   };
 
   useEffect(() => {
-    if (!task?.conversation_id) return;
-    client.get(`/conversations/${task.conversation_id}/messages`).then((res) => setMessages(res.data));
-  }, [task?.conversation_id]);
+    if (!activeConversationId) return;
+    client.get(`/conversations/${activeConversationId}/messages`).then((res) => setMessages(res.data));
+  }, [activeConversationId]);
+
+  const createConversation = async () => {
+    if (!taskId) return;
+    const res = await client.post("/conversations/", { task_id: Number(taskId), title: `对话 ${conversations.length + 1}` });
+    setConversations((prev) => [{ id: res.data.id, title: res.data.title, created_at: res.data.created_at }, ...prev]);
+    setActiveConversationId(res.data.id);
+    setMessages([]);
+    setShowConversationList(false);
+  };
+
+  const deleteConversation = async (convId: number) => {
+    if (!confirm("确认删除此对话？")) return;
+    await client.delete(`/conversations/${convId}`);
+    setConversations((prev) => prev.filter((c) => c.id !== convId));
+    if (activeConversationId === convId) {
+      const remaining = conversations.filter((c) => c.id !== convId);
+      if (remaining.length > 0) {
+        setActiveConversationId(remaining[0].id);
+      } else {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+    }
+  };
+
+  const renameConversation = async (convId: number, newTitle: string) => {
+    await client.patch(`/conversations/${convId}`, { title: newTitle });
+    setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c)));
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -263,6 +325,41 @@ export default function WorkspacePage() {
     setChapters(res.data);
   };
 
+  // Auto-save with debounce
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const triggerAutoSave = useCallback(() => {
+    if (!activeChapter) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setAutoSaveStatus("idle");
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        await client.patch(`/chapters/${activeChapter.id}`, {
+          title: editTitle,
+          content: editContent,
+        });
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } catch {
+        setAutoSaveStatus("error");
+        setTimeout(() => setAutoSaveStatus("idle"), 3000);
+      }
+    }, 1500); // 1.5 second debounce
+  }, [activeChapter, editTitle, editContent]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
   const addChapter = async () => {
     if (!taskId) return;
     const res = await client.post("/chapters/", {
@@ -276,16 +373,20 @@ export default function WorkspacePage() {
 
   const handleAddSource = async () => {
     if (!taskId) return;
+    let sourceId: number | null = null;
     if (sourceImportTab === "file" && sourceFile) {
       const formData = new FormData();
       formData.append("task_id", String(taskId));
       formData.append("name", sourceName || sourceFile.name.replace(/\.[^.]+$/, ""));
       formData.append("file", sourceFile);
-      await client.post("/sources/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      const res = await client.post("/sources/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      sourceId = res.data.id;
     } else if (sourceImportTab === "url") {
-      await client.post("/sources/fetch-url", { task_id: Number(taskId), url: sourceUrl, name: sourceName || sourceUrl });
+      const res = await client.post("/sources/fetch-url", { task_id: Number(taskId), url: sourceUrl, name: sourceName || sourceUrl });
+      sourceId = res.data.id;
     } else {
-      await client.post("/sources/", { task_id: Number(taskId), name: sourceName || "未命名素材", type: "text", content: sourceContent });
+      const res = await client.post("/sources/", { task_id: Number(taskId), name: sourceName || "未命名素材", type: "text", content: sourceContent });
+      sourceId = res.data.id;
     }
     setShowSourceModal(false);
     setSourceName("");
@@ -294,6 +395,16 @@ export default function WorkspacePage() {
     setSourceFile(null);
     const res = await client.get(`/sources/by-task/${taskId}`);
     setSources(res.data);
+    // Auto-generate summary for the new source
+    if (sourceId) {
+      try {
+        await client.post("/ai/source-summary", { source_id: sourceId });
+        const updatedRes = await client.get(`/sources/by-task/${taskId}`);
+        setSources(updatedRes.data);
+      } catch {
+        // Summary generation failed silently
+      }
+    }
   };
 
   const handleDeleteSource = async (sourceId: number) => {
@@ -317,6 +428,99 @@ export default function WorkspacePage() {
     const res = await client.get(`/chapters/by-task/${taskId}`);
     setChapters(res.data);
   };
+
+  const openDiffView = async (v1: number, v2: number) => {
+    if (!activeChapter) return;
+    setDiffVersion1(v1);
+    setDiffVersion2(v2);
+    try {
+      const [res1, res2] = await Promise.all([
+        client.get(`/chapters/${activeChapter.id}/versions/${v1}`),
+        client.get(`/chapters/${activeChapter.id}/versions/${v2}`),
+      ]);
+      setDiffContent({ v1: res1.data.content, v2: res2.data.content });
+      setShowDiffModal(true);
+    } catch {
+      alert("加载版本内容失败");
+    }
+  };
+
+  const renderDiff = (text1: string, text2: string) => {
+    const lines1 = text1.split("\n");
+    const lines2 = text2.split("\n");
+    const maxLen = Math.max(lines1.length, lines2.length);
+    const result: { line1: string; line2: string; changed: boolean }[] = [];
+
+    for (let i = 0; i < maxLen; i++) {
+      const l1 = lines1[i] || "";
+      const l2 = lines2[i] || "";
+      result.push({ line1: l1, line2: l2, changed: l1 !== l2 });
+    }
+    return result;
+  };
+
+  // Writing statistics
+  const totalWordCount = useMemo(() => {
+    return chapters.reduce((sum, ch) => sum + (ch.content?.length || 0), 0);
+  }, [chapters]);
+
+  const chapterStats = useMemo(() => {
+    return chapters.map((ch) => ({
+      id: ch.id,
+      title: ch.title,
+      wordCount: ch.content?.length || 0,
+      version: ch.version,
+    }));
+  }, [chapters]);
+
+  const goalProgress = useMemo(() => {
+    return Math.min(100, Math.round((dailyWordCount / writingGoal) * 100));
+  }, [dailyWordCount, writingGoal]);
+
+  // Track daily word count and check reminders
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const savedDate = localStorage.getItem("lastWritingDate");
+    const savedCount = localStorage.getItem("dailyWordCount");
+
+    if (savedDate === today && savedCount) {
+      setDailyWordCount(parseInt(savedCount));
+    } else {
+      setDailyWordCount(0);
+      localStorage.setItem("lastWritingDate", today);
+      localStorage.setItem("dailyWordCount", "0");
+    }
+
+    // Check if we should show a reminder
+    const lastReminder = localStorage.getItem("lastReminderDate");
+    const reminderEnabled = localStorage.getItem("reminderEnabled") !== "false";
+
+    if (reminderEnabled && lastReminder !== today) {
+      const hour = new Date().getHours();
+      // Show reminder in the evening if no writing done today
+      if (hour >= 18 && (!savedCount || parseInt(savedCount) === 0)) {
+        setReminderMessage("今天还没有写作哦！坚持每天写作，让创意不断涌现。");
+        setShowReminder(true);
+        localStorage.setItem("lastReminderDate", today);
+      }
+    }
+  }, []);
+
+  // Update daily word count when content changes
+  useEffect(() => {
+    if (activeChapter) {
+      const originalLength = activeChapter.content?.length || 0;
+      const currentLength = editContent.length;
+      const diff = currentLength - originalLength;
+      if (diff > 0) {
+        setDailyWordCount((prev) => {
+          const newCount = prev + diff;
+          localStorage.setItem("dailyWordCount", String(newCount));
+          return newCount;
+        });
+      }
+    }
+  }, [editContent]);
 
   const generateSummary = async () => {
     if (!activeChapter) return;
@@ -510,6 +714,39 @@ export default function WorkspacePage() {
       )
     : chapters;
 
+  // Extract headings from chapter content for outline view
+  const extractOutline = (content: string) => {
+    const lines = content.split("\n");
+    const headings: { level: number; title: string; line: number }[] = [];
+    lines.forEach((line, index) => {
+      const match = line.match(/^(#{1,6})\s+(.+)$/);
+      if (match) {
+        headings.push({
+          level: match[1].length,
+          title: match[2].trim(),
+          line: index + 1,
+        });
+      }
+    });
+    return headings;
+  };
+
+  // Update outline when active chapter changes
+  useEffect(() => {
+    if (activeChapter?.content) {
+      setChapterOutline(extractOutline(activeChapter.content));
+    } else {
+      setChapterOutline([]);
+    }
+  }, [activeChapter?.content]);
+
+  // Trigger auto-save when content or title changes
+  useEffect(() => {
+    if (activeChapter && (editContent !== activeChapter.content || editTitle !== activeChapter.title)) {
+      triggerAutoSave();
+    }
+  }, [editContent, editTitle, activeChapter, triggerAutoSave]);
+
   const downloadFile = (filename: string, content: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -557,6 +794,36 @@ export default function WorkspacePage() {
       <script>window.print();window.onafterprint=()=>window.close();</script>
       </body></html>`);
     printWindow.document.close();
+  };
+
+  const exportCurrentChapterDocx = async () => {
+    if (!activeChapter) return;
+    try {
+      const response = await client.get(`/chapters/${activeChapter.id}/export/docx`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${editTitle}.docx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("DOCX 导出失败");
+    }
+  };
+
+  const exportAllChaptersDocx = async () => {
+    if (!taskId) return;
+    try {
+      const response = await client.get(`/chapters/by-task/${taskId}/export/docx`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${task?.title || "全部章节"}.docx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("DOCX 导出失败");
+    }
   };
 
   useEffect(() => {
@@ -612,9 +879,9 @@ export default function WorkspacePage() {
   }, [editContent, editTitle, activeChapter, chapters, task, streaming]);
 
   const connectWs = useCallback(() => {
-    if (!task?.conversation_id) return;
+    if (!activeConversationId) return;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/ws/conversations/${task.conversation_id}`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/ws/conversations/${activeConversationId}`);
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -660,7 +927,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     connectWs();
     return () => { wsRef.current?.close(); };
-  }, [connectWs]);
+  }, [connectWs, activeConversationId]);
 
   const sendMessage = () => {
     if (!input.trim() || !wsRef.current || streaming) return;
@@ -720,10 +987,18 @@ export default function WorkspacePage() {
     finally { setSearchLoading(false); }
   };
 
-  // F1: Citation
-  const handleCitationClick = (e: React.MouseEvent, index: number) => {
+  // F1: Citation - improved to open source detail modal
+  const handleCitationClick = async (e: React.MouseEvent, index: number) => {
     e.preventDefault();
-    if (sources[index]) setCitationPopover({ text: sources[index].name, x: e.clientX, y: e.clientY });
+    if (sources[index]) {
+      setShowSourceDetail(sources[index]);
+      try {
+        const res = await client.get(`/sources/${sources[index].id}`);
+        setSourceDetailContent(res.data.content || "");
+      } catch {
+        setSourceDetailContent("加载失败");
+      }
+    }
   };
 
   const renderWithCitations = (text: string) => {
@@ -769,6 +1044,7 @@ export default function WorkspacePage() {
                 <div style={{ display: "flex", gap: 4 }}>
                   <button className={`btn-add ${chapterView === "list" ? "active" : ""}`} onClick={() => setChapterView("list")} title="列表" style={{ fontSize: 12, width: 28, height: 28 }}>☰</button>
                   <button className={`btn-add ${chapterView === "timeline" ? "active" : ""}`} onClick={() => setChapterView("timeline")} title="时间线" style={{ fontSize: 12, width: 28, height: 28 }}>⏳</button>
+                  <button className={`btn-add ${chapterView === "outline" ? "active" : ""}`} onClick={() => setChapterView("outline")} title="大纲" style={{ fontSize: 12, width: 28, height: 28 }}>📋</button>
                   <button className="btn-add" onClick={addChapter}>+</button>
                 </div>
               </div>
@@ -810,7 +1086,7 @@ export default function WorkspacePage() {
                     <div className="chapter-empty-msg">{searchQuery ? "无匹配章节" : "暂无章节，点击 + 创建"}</div>
                   )}
                 </div>
-              ) : (
+              ) : chapterView === "timeline" ? (
                 <div className="timeline-view">
                   {filteredChapters.map((ch) => (
                     <div key={ch.id} className={`timeline-item ${activeChapter?.id === ch.id ? "active" : ""}`} onClick={() => loadChapter(ch.id)}>
@@ -821,6 +1097,50 @@ export default function WorkspacePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="outline-view" style={{ padding: "8px 0" }}>
+                  {!activeChapter ? (
+                    <div className="chapter-empty-msg">请先选择一个章节</div>
+                  ) : chapterOutline.length === 0 ? (
+                    <div className="chapter-empty-msg">当前章节无标题结构</div>
+                  ) : (
+                    <div className="outline-list">
+                      {chapterOutline.map((item, i) => (
+                        <div
+                          key={i}
+                          className="outline-item"
+                          style={{
+                            paddingLeft: `${(item.level - 1) * 16 + 8}px`,
+                            padding: "6px 8px 6px `${(item.level - 1) * 16 + 8}px`",
+                            cursor: "pointer",
+                            fontSize: item.level === 1 ? 14 : 13,
+                            fontWeight: item.level === 1 ? 600 : 400,
+                            color: "var(--color-text)",
+                            borderRadius: 4,
+                          }}
+                          onClick={() => {
+                            // Scroll to heading in editor
+                            const textarea = editorRef.current;
+                            if (textarea) {
+                              const lines = editContent.split("\n");
+                              let charIndex = 0;
+                              for (let j = 0; j < item.line - 1; j++) {
+                                charIndex += lines[j].length + 1;
+                              }
+                              textarea.focus();
+                              textarea.setSelectionRange(charIndex, charIndex + lines[item.line - 1].length);
+                            }
+                          }}
+                        >
+                          <span style={{ color: "var(--color-text-secondary)", marginRight: 8, fontSize: 11 }}>
+                            {"#".repeat(item.level)}
+                          </span>
+                          {item.title}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {activeChapter && (
@@ -850,13 +1170,14 @@ export default function WorkspacePage() {
               </div>
               <div className="source-list">
                 {sources.map((s) => (
-                  <div key={s.id} className="source-item">
+                  <div key={s.id} className="source-item" onClick={() => { setShowSourceDetail(s); setSourceDetailContent(s.summary || ""); }} style={{ cursor: "pointer" }}>
                     <span className="source-icon">{SOURCE_ICONS[s.type] || "📄"}</span>
                     <div className="source-info">
                       <div className="source-name">{s.name}</div>
                       <div className="source-meta">{s.word_count} 字 {s.usage_count ? `· 引用 ${s.usage_count} 次` : ""}</div>
+                      {s.summary && <div className="source-summary" style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.summary.slice(0, 60)}...</div>}
                     </div>
-                    <button className="source-delete" onClick={() => handleDeleteSource(s.id)} title="删除">×</button>
+                    <button className="source-delete" onClick={(e) => { e.stopPropagation(); handleDeleteSource(s.id); }} title="删除">×</button>
                   </div>
                 ))}
                 {sources.length === 0 && (
@@ -1011,8 +1332,14 @@ export default function WorkspacePage() {
                 </div>
                 <button className="btn-history" onClick={toggleSpeaking} title={isSpeaking ? "停止朗读" : "朗读"}>{isSpeaking ? "⏹️ 停止" : "🔊 朗读"}</button>
                 <button className="btn-history" onClick={() => setShowExportModal(true)} title="导出">📤 导出</button>
+                <button className="btn-history" onClick={() => setShowStatsModal(true)} title="统计">📊 统计</button>
                 <button className="btn-history" onClick={openVersionHistory} title="历史版本">🕐 历史</button>
-                <button className="btn-save" onClick={saveChapter}>保存</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {autoSaveStatus === "saving" && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>保存中...</span>}
+                  {autoSaveStatus === "saved" && <span style={{ fontSize: 12, color: "#22c55e" }}>✓ 已自动保存</span>}
+                  {autoSaveStatus === "error" && <span style={{ fontSize: 12, color: "#ef4444" }}>保存失败</span>}
+                  <button className="btn-save" onClick={saveChapter}>保存</button>
+                </div>
               </div>
               <div className="editor-body">
                 <textarea
@@ -1037,7 +1364,25 @@ export default function WorkspacePage() {
         {/* Right: AI Chat */}
         <aside className="ws-chat">
           <div className="chat-header">
-            <h3>AI 创作助手</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+              <h3 style={{ margin: 0 }}>AI 创作助手</h3>
+              <button
+                className="btn-add"
+                onClick={() => setShowConversationList(!showConversationList)}
+                title="对话列表"
+                style={{ fontSize: 12, width: 24, height: 24, padding: 0 }}
+              >
+                💬
+              </button>
+              <button
+                className="btn-add"
+                onClick={createConversation}
+                title="新建对话"
+                style={{ fontSize: 12, width: 24, height: 24, padding: 0 }}
+              >
+                +
+              </button>
+            </div>
             {availableModels.length > 0 && (
               <select
                 className="model-selector"
@@ -1050,6 +1395,51 @@ export default function WorkspacePage() {
               </select>
             )}
           </div>
+          {/* Conversation list dropdown */}
+          {showConversationList && (
+            <div className="conversation-list" style={{
+              background: "var(--color-bg-secondary)",
+              borderBottom: "1px solid var(--color-border)",
+              maxHeight: 200,
+              overflow: "auto",
+            }}>
+              {conversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  className={`conversation-item ${activeConversationId === conv.id ? "active" : ""}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    background: activeConversationId === conv.id ? "var(--color-primary-light)" : "transparent",
+                  }}
+                  onClick={() => {
+                    setActiveConversationId(conv.id);
+                    setShowConversationList(false);
+                  }}
+                >
+                  <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {conv.title}
+                  </span>
+                  <button
+                    className="source-delete"
+                    onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                    title="删除"
+                    style={{ width: 20, height: 20, fontSize: 12 }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {conversations.length === 0 && (
+                <div style={{ padding: "8px 12px", fontSize: 13, color: "var(--color-text-secondary)" }}>
+                  暂无对话，点击 + 创建
+                </div>
+              )}
+            </div>
+          )}
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="chat-welcome">
@@ -1139,7 +1529,14 @@ export default function WorkspacePage() {
             </div>
             <input placeholder="素材名称" value={sourceName} onChange={(e) => setSourceName(e.target.value)} style={{ marginBottom: 12 }} />
             {sourceImportTab === "text" && <textarea placeholder="粘贴文本内容..." value={sourceContent} onChange={(e) => setSourceContent(e.target.value)} />}
-            {sourceImportTab === "url" && <input placeholder="https://example.com/article" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} />}
+            {sourceImportTab === "url" && (
+              <div>
+                <input placeholder="https://example.com/article 或 YouTube 链接" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} />
+                <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>
+                  支持网页链接和 YouTube 视频（自动提取字幕）
+                </p>
+              </div>
+            )}
             {sourceImportTab === "file" && (
               <div className="file-upload-area">
                 <input type="file" accept=".txt,.md,.pdf,.docx" onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
@@ -1166,6 +1563,7 @@ export default function WorkspacePage() {
                   <button className="btn-export" onClick={() => { exportCurrentChapter("md"); setShowExportModal(false); }}>Markdown (.md)</button>
                   <button className="btn-export" onClick={() => { exportCurrentChapter("txt"); setShowExportModal(false); }}>纯文本 (.txt)</button>
                   <button className="btn-export" onClick={() => { exportAsPdf(); setShowExportModal(false); }}>PDF (打印)</button>
+                  <button className="btn-export" onClick={() => { exportCurrentChapterDocx(); setShowExportModal(false); }}>Word (.docx)</button>
                 </div>
               </div>
               <div className="export-section">
@@ -1173,6 +1571,7 @@ export default function WorkspacePage() {
                 <div className="export-btns">
                   <button className="btn-export" onClick={() => { exportAllChapters("md"); setShowExportModal(false); }}>Markdown (.md)</button>
                   <button className="btn-export" onClick={() => { exportAllChapters("txt"); setShowExportModal(false); }}>纯文本 (.txt)</button>
+                  <button className="btn-export" onClick={() => { exportAllChaptersDocx(); setShowExportModal(false); }}>Word (.docx)</button>
                 </div>
               </div>
             </div>
@@ -1189,19 +1588,76 @@ export default function WorkspacePage() {
               <p style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>暂无历史版本</p>
             ) : (
               <div className="version-list">
-                {versions.map((v) => (
+                {versions.map((v, idx) => (
                   <div key={v.id} className="version-item">
                     <div className="version-info">
                       <span className="version-label">v{v.version}</span>
                       <span className="version-date">{new Date(v.created_at).toLocaleString("zh-CN")}</span>
                     </div>
                     <div className="version-actions">
+                      {idx < versions.length - 1 && (
+                        <button className="btn-restore" onClick={() => openDiffView(versions[idx + 1].version, v.version)} style={{ marginRight: 8 }}>
+                          对比
+                        </button>
+                      )}
                       <button className="btn-restore" onClick={() => restoreVersion(v.version)}>恢复</button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Diff modal */}
+      {showDiffModal && diffContent && (
+        <div className="modal-overlay" onClick={() => setShowDiffModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 900, maxWidth: "90vw", maxHeight: "80vh", overflow: "auto" }}>
+            <h3>版本对比：v{diffVersion1} → v{diffVersion2}</h3>
+            <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: "0 0 8px", color: "var(--color-text-secondary)" }}>v{diffVersion1}（旧版本）</h4>
+                <div style={{
+                  background: "var(--color-bg-secondary)",
+                  padding: 12,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                  maxHeight: "60vh",
+                  overflow: "auto",
+                }}>
+                  {renderDiff(diffContent.v1, diffContent.v2).map((line, i) => (
+                    <div key={i} style={{ background: line.changed ? "#fef2f2" : "transparent", padding: "2px 4px" }}>
+                      {line.line1 || " "}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: "0 0 8px", color: "var(--color-text-secondary)" }}>v{diffVersion2}（新版本）</h4>
+                <div style={{
+                  background: "var(--color-bg-secondary)",
+                  padding: 12,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                  maxHeight: "60vh",
+                  overflow: "auto",
+                }}>
+                  {renderDiff(diffContent.v1, diffContent.v2).map((line, i) => (
+                    <div key={i} style={{ background: line.changed ? "#f0fdf4" : "transparent", padding: "2px 4px" }}>
+                      {line.line2 || " "}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-cancel" onClick={() => setShowDiffModal(false)}>关闭</button>
+            </div>
           </div>
         </div>
       )}
@@ -1326,23 +1782,104 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* Character graph modal */}
+      {/* Character graph modal - Enhanced */}
       {showGraphModal && (
         <div className="modal-overlay" onClick={() => setShowGraphModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 700, height: 500 }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 800, height: 600 }}>
             <h3>角色关系图谱</h3>
-            <div className="graph-container">
+            <div className="graph-container" style={{ position: "relative", width: "100%", height: "calc(100% - 80px)", overflow: "auto" }}>
               {characters.length === 0 ? (
                 <p style={{ color: "var(--color-text-secondary)", textAlign: "center", padding: 40 }}>暂无角色数据</p>
               ) : (
-                <div className="graph-nodes">
-                  {characters.map((c) => (
-                    <div key={c.id} className="graph-node">
-                      <div className="graph-node-name">{c.name}</div>
-                      <div className="graph-node-role">{c.role}</div>
-                      {c.relationships && <div className="graph-node-rel">{c.relationships}</div>}
+                <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 400 }}>
+                  {/* Central node - Main character */}
+                  {characters.filter(c => c.role?.includes("主角") || c.role?.includes("main")).slice(0, 1).map((c, idx) => (
+                    <div key={c.id} style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      background: "var(--color-primary)",
+                      color: "white",
+                      padding: "16px 24px",
+                      borderRadius: 12,
+                      textAlign: "center",
+                      minWidth: 120,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      zIndex: 2,
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{c.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>{c.role}</div>
                     </div>
                   ))}
+
+                  {/* Other characters in circle */}
+                  {characters.filter(c => !c.role?.includes("主角") && !c.role?.includes("main")).map((c, idx, arr) => {
+                    const angle = (idx / arr.length) * 2 * Math.PI - Math.PI / 2;
+                    const radius = 180;
+                    const centerX = 50;
+                    const centerY = 50;
+                    const x = centerX + radius * Math.cos(angle) * 0.8;
+                    const y = centerY + radius * Math.sin(angle) * 0.6;
+
+                    const roleColors: Record<string, string> = {
+                      "反派": "#ef4444",
+                      "配角": "#6b7280",
+                      "导师": "#8b5cf6",
+                      "盟友": "#22c55e",
+                    };
+                    const bgColor = roleColors[c.role || ""] || "#6b7280";
+
+                    return (
+                      <div key={c.id} style={{
+                        position: "absolute",
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        transform: "translate(-50%, -50%)",
+                        background: bgColor,
+                        color: "white",
+                        padding: "12px 16px",
+                        borderRadius: 10,
+                        textAlign: "center",
+                        minWidth: 100,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                        zIndex: 1,
+                      }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+                        <div style={{ fontSize: 11, opacity: 0.9, marginTop: 2 }}>{c.role || "未设定"}</div>
+                        {c.relationships && (
+                          <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {c.relationships}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Connection lines (SVG) */}
+                  <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}>
+                    {characters.filter(c => !c.role?.includes("主角") && !c.role?.includes("main")).map((c, idx, arr) => {
+                      const angle = (idx / arr.length) * 2 * Math.PI - Math.PI / 2;
+                      const radius = 180;
+                      const startX = 50;
+                      const startY = 50;
+                      const endX = 50 + radius * Math.cos(angle) * 0.8;
+                      const endY = 50 + radius * Math.sin(angle) * 0.6;
+
+                      return (
+                        <line
+                          key={c.id}
+                          x1={`${startX}%`}
+                          y1={`${startY}%`}
+                          x2={`${endX}%`}
+                          y2={`${endY}%`}
+                          stroke="var(--color-border)"
+                          strokeWidth="2"
+                          strokeDasharray="4"
+                        />
+                      );
+                    })}
+                  </svg>
                 </div>
               )}
             </div>
@@ -1353,11 +1890,51 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* Citation popover */}
+      {/* Citation popover - kept for backward compatibility */}
       {citationPopover && (
         <div className="citation-popover-overlay" onClick={() => setCitationPopover(null)}>
           <div className="citation-popover" style={{ left: citationPopover.x, top: citationPopover.y }} onClick={(e) => e.stopPropagation()}>
             <strong>引用素材：</strong> {citationPopover.text}
+          </div>
+        </div>
+      )}
+
+      {/* Source detail modal - for citation click */}
+      {showSourceDetail && (
+        <div className="modal-overlay" onClick={() => { setShowSourceDetail(null); setSourceDetailContent(""); }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 700, maxHeight: "80vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{showSourceDetail.name}</h3>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                  {SOURCE_ICONS[showSourceDetail.type] || "📄"} {showSourceDetail.type}
+                </span>
+                <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                  {showSourceDetail.word_count} 字
+                </span>
+              </div>
+            </div>
+            <div className="source-detail-content" style={{ 
+              whiteSpace: "pre-wrap", 
+              lineHeight: 1.8, 
+              padding: 16, 
+              background: "var(--color-bg-secondary, #f5f5f5)", 
+              borderRadius: 8,
+              fontSize: 14,
+              maxHeight: "60vh",
+              overflow: "auto"
+            }}>
+              {sourceDetailContent || "加载中..."}
+            </div>
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-cancel" onClick={() => { setShowSourceDetail(null); setSourceDetailContent(""); }}>关闭</button>
+              <button className="btn-save" onClick={() => {
+                // Switch to sources tab and highlight the source
+                setSidebarTab("sources");
+                setShowSourceDetail(null);
+                setSourceDetailContent("");
+              }}>在素材列表中查看</button>
+            </div>
           </div>
         </div>
       )}
@@ -1373,6 +1950,113 @@ export default function WorkspacePage() {
       {/* Toast notification */}
       {aiSaveToast && (
         <div className="toast-notification">{aiSaveToast}</div>
+      )}
+
+      {/* Writing reminder notification */}
+      {showReminder && (
+        <div className="modal-overlay" onClick={() => setShowReminder(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 400, textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>✍️</div>
+            <h3 style={{ marginBottom: 8 }}>写作提醒</h3>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: 24 }}>{reminderMessage}</p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button className="btn-cancel" onClick={() => setShowReminder(false)}>稍后提醒</button>
+              <button className="btn-save" onClick={() => {
+                setShowReminder(false);
+                // Focus on editor
+                const textarea = editorRef.current;
+                if (textarea) textarea.focus();
+              }}>开始写作</button>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <label style={{ fontSize: 12, color: "var(--color-text-secondary)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  defaultChecked={localStorage.getItem("reminderEnabled") !== "false"}
+                  onChange={(e) => localStorage.setItem("reminderEnabled", String(e.target.checked))}
+                  style={{ marginRight: 4 }}
+                />
+                启用每日提醒
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Writing statistics modal */}
+      {showStatsModal && (
+        <div className="modal-overlay" onClick={() => setShowStatsModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 600 }}>
+            <h3>写作统计</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Overall stats */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                <div style={{ textAlign: "center", padding: 16, background: "var(--color-bg-secondary)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-primary)" }}>{chapters.length}</div>
+                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>总章节数</div>
+                </div>
+                <div style={{ textAlign: "center", padding: 16, background: "var(--color-bg-secondary)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-primary)" }}>{totalWordCount.toLocaleString()}</div>
+                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>总字数</div>
+                </div>
+                <div style={{ textAlign: "center", padding: 16, background: "var(--color-bg-secondary)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-primary)" }}>{sources.length}</div>
+                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>素材数量</div>
+                </div>
+              </div>
+
+              {/* Daily goal */}
+              <div style={{ padding: 16, background: "var(--color-bg-secondary)", borderRadius: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <h4 style={{ margin: 0 }}>今日写作目标</h4>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="number"
+                      value={writingGoal}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1000;
+                        setWritingGoal(val);
+                        localStorage.setItem("writingGoal", String(val));
+                      }}
+                      style={{ width: 80, padding: "4px 8px", borderRadius: 4, border: "1px solid var(--color-border)" }}
+                    />
+                    <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>字</span>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                    <span>已完成: {dailyWordCount} 字</span>
+                    <span>{goalProgress}%</span>
+                  </div>
+                  <div style={{ height: 8, background: "var(--color-border)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${goalProgress}%`, background: goalProgress >= 100 ? "#22c55e" : "var(--color-primary)", borderRadius: 4, transition: "width 0.3s" }} />
+                  </div>
+                </div>
+                {goalProgress >= 100 && (
+                  <div style={{ textAlign: "center", color: "#22c55e", fontSize: 14, fontWeight: 600 }}>
+                    🎉 恭喜！今日目标已完成！
+                  </div>
+                )}
+              </div>
+
+              {/* Chapter breakdown */}
+              <div>
+                <h4 style={{ margin: "0 0 8px" }}>章节字数分布</h4>
+                <div style={{ maxHeight: 200, overflow: "auto" }}>
+                  {chapterStats.map((ch) => (
+                    <div key={ch.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--color-border)" }}>
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.title}</span>
+                      <span style={{ color: "var(--color-text-secondary)", marginLeft: 16 }}>{ch.wordCount.toLocaleString()} 字</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-cancel" onClick={() => setShowStatsModal(false)}>关闭</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

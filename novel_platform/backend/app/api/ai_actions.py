@@ -187,3 +187,100 @@ async def get_available_models(user=Depends(get_current_user)):
         "models": settings.available_models_list,
         "default": settings.llm_model,
     }
+
+
+class SourceSummaryRequest(BaseModel):
+    source_id: int
+
+
+class SourceSummaryUpdate(BaseModel):
+    summary: str
+    keywords: str
+
+
+@router.post("/source-summary")
+async def generate_source_summary(
+    req: SourceSummaryRequest,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """为素材自动生成摘要和关键词"""
+    result = await db.execute(
+        select(Source).join(Task).where(Source.id == req.source_id, Task.owner_id == user.id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    content_preview = truncate(source.content, 4000)
+
+    prompt = f"""请为以下素材生成一份简洁的摘要和关键词。
+
+素材名称：{source.name}
+素材内容：
+{content_preview}
+
+请按以下格式输出：
+## 摘要
+（200字以内的摘要，概括素材的核心内容）
+
+## 关键词
+（5-8个关键词，用逗号分隔）"""
+
+    messages = [
+        {"role": "system", "content": "你是一个专业的文本分析助手。请用中文回复，使用 Markdown 格式。"},
+        {"role": "user", "content": prompt},
+    ]
+
+    result = await chat_once(messages)
+
+    # Parse summary and keywords from result
+    summary = ""
+    keywords = ""
+    lines = result.split("\n")
+    current_section = None
+    summary_lines = []
+
+    for line in lines:
+        if line.strip().startswith("## 摘要"):
+            current_section = "summary"
+            continue
+        elif line.strip().startswith("## 关键词"):
+            current_section = "keywords"
+            continue
+
+        if current_section == "summary":
+            summary_lines.append(line.strip())
+        elif current_section == "keywords":
+            keywords = line.strip().lstrip("-").strip()
+
+    summary = " ".join(summary_lines).strip()
+
+    # Update source with summary and keywords
+    source.summary = summary
+    source.keywords = keywords
+    await db.commit()
+
+    return {"summary": summary, "keywords": keywords}
+
+
+@router.patch("/source-summary/{source_id}")
+async def update_source_summary(
+    source_id: int,
+    req: SourceSummaryUpdate,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新素材摘要和关键词"""
+    result = await db.execute(
+        select(Source).join(Task).where(Source.id == source_id, Task.owner_id == user.id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    source.summary = req.summary
+    source.keywords = req.keywords
+    await db.commit()
+
+    return {"ok": True}

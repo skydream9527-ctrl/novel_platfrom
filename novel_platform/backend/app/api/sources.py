@@ -50,6 +50,8 @@ async def list_sources(task_id: int, user=Depends(get_current_user), db: AsyncSe
             "type": s.type,
             "word_count": s.word_count,
             "usage_count": usage_count,
+            "summary": s.summary or "",
+            "keywords": s.keywords or "",
             "created_at": s.created_at.isoformat() if s.created_at else None,
         }
         for s, usage_count in rows
@@ -204,21 +206,81 @@ async def fetch_url_source(req: FetchUrlRequest, user=Depends(get_current_user),
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    try:
-        import httpx
-        import trafilatura
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            resp = await client.get(req.url)
-            resp.raise_for_status()
-            html = resp.text
-        content = trafilatura.extract(html) or ""
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"网页抓取失败: {e}")
+    url = req.url.strip()
 
-    if not content.strip():
-        raise HTTPException(status_code=400, detail="无法提取网页内容")
+    # Check if it's a YouTube URL
+    youtube_patterns = [
+        r'(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]+)',
+        r'(?:https?://)?(?:www\.)?youtu\.be/([a-zA-Z0-9_-]+)',
+        r'(?:https?://)?(?:www\.)?youtube\.com/embed/([a-zA-Z0-9_-]+)',
+    ]
 
-    source_name = req.name or req.url[:100]
+    is_youtube = False
+    video_id = None
+    for pattern in youtube_patterns:
+        import re
+        match = re.search(pattern, url)
+        if match:
+            is_youtube = True
+            video_id = match.group(1)
+            break
+
+    if is_youtube and video_id:
+        # Extract YouTube transcript
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+            # Try to get Chinese transcript first, then English, then any
+            transcript = None
+            for lang in ['zh-Hans', 'zh', 'zh-CN', 'en']:
+                try:
+                    transcript = transcript_list.find_transcript([lang])
+                    break
+                except Exception:
+                    continue
+
+            if not transcript:
+                transcript = transcript_list.find_manually_created_transcript()
+
+            transcript_data = transcript.fetch()
+            content = "\n".join([entry.text for entry in transcript_data])
+
+            # Get video title
+            try:
+                import httpx
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json")
+                    if resp.status_code == 200:
+                        video_info = resp.json()
+                        source_name = req.name or video_info.get("title", f"YouTube: {video_id}")
+                    else:
+                        source_name = req.name or f"YouTube: {video_id}"
+            except Exception:
+                source_name = req.name or f"YouTube: {video_id}"
+
+        except ImportError:
+            raise HTTPException(status_code=500, detail="youtube-transcript-api 未安装，请运行: pip install youtube-transcript-api")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"YouTube 字幕提取失败: {e}")
+    else:
+        # Regular URL - extract with trafilatura
+        try:
+            import httpx
+            import trafilatura
+            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                html = resp.text
+            content = trafilatura.extract(html) or ""
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"网页抓取失败: {e}")
+
+        if not content.strip():
+            raise HTTPException(status_code=400, detail="无法提取网页内容")
+
+        source_name = req.name or url[:100]
+
     source = Source(task_id=req.task_id, name=source_name, type="url", content=content, word_count=len(content))
     db.add(source)
     await db.commit()

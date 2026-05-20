@@ -70,6 +70,7 @@ class Conversation(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    title = Column(String(200), default="新对话")
     created_at = Column(DateTime, default=utcnow)
 
     task = relationship("Task", back_populates="conversations")
@@ -96,7 +97,11 @@ class Template(Base):
     type = Column(String(20), nullable=False)  # novel / script / storyboard
     content = Column(Text, nullable=False)
     is_builtin = Column(Integer, default=0)
+    is_public = Column(Integer, default=0)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=utcnow)
+
+    author = relationship("User")
 
 
 class Source(Base):
@@ -108,6 +113,8 @@ class Source(Base):
     type = Column(String(20), default="text", nullable=False)  # text / file / url / chapter
     content = Column(Text, default="")
     word_count = Column(Integer, default=0)
+    summary = Column(Text, default="")
+    keywords = Column(String(500), default="")
     created_at = Column(DateTime, default=utcnow)
 
     task = relationship("Task", back_populates="sources")
@@ -181,6 +188,95 @@ class SourceReference(Base):
 
     source = relationship("Source")
     message = relationship("Message")
+
+
+class CanvasCard(Base):
+    __tablename__ = "canvas_cards"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, default="")
+    card_type = Column(String(20), default="note")  # note / scene / character / event / idea
+    x = Column(Integer, default=100)
+    y = Column(Integer, default=100)
+    width = Column(Integer, default=200)
+    height = Column(Integer, default=150)
+    color = Column(String(20), default="#ffffff")
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+
+
+class CanvasConnection(Base):
+    __tablename__ = "canvas_connections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    source_card_id = Column(Integer, ForeignKey("canvas_cards.id"), nullable=False)
+    target_card_id = Column(Integer, ForeignKey("canvas_cards.id"), nullable=False)
+    label = Column(String(100), default="")
+    connection_type = Column(String(20), default="related")  # related / causes / leads_to / part_of
+    created_at = Column(DateTime, default=utcnow)
+
+    task = relationship("Task")
+    source_card = relationship("CanvasCard", foreign_keys=[source_card_id])
+    target_card = relationship("CanvasCard", foreign_keys=[target_card_id])
+
+
+class DailyNote(Base):
+    __tablename__ = "daily_notes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(String(10), nullable=False)  # YYYY-MM-DD
+    content = Column(Text, default="")
+    mood = Column(String(20), default="")
+    word_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship("User")
+
+
+class Snippet(Base):
+    __tablename__ = "snippets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(50), default="general")  # scene / dialogue / description / general
+    tags = Column(String(500), default="")
+    usage_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+
+class ChapterBranch(Base):
+    __tablename__ = "chapter_branches"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
+    name = Column(String(100), nullable=False)
+    content = Column(Text, default="")
+    is_active = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    chapter = relationship("Chapter")
+
+
+class FavoriteItem(Base):
+    __tablename__ = "favorite_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    item_type = Column(String(20), nullable=False)  # chapter / character / note / source
+    item_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User")
 
 
 from sqlalchemy import UniqueConstraint

@@ -21,6 +21,10 @@ interface Template {
   name: string;
   type: string;
   content: string;
+  is_builtin?: number;
+  is_public?: boolean;
+  author_name?: string;
+  created_at?: string;
 }
 
 interface FolderItem {
@@ -39,6 +43,12 @@ export default function DashboardPage() {
   const [dirError, setDirError] = useState("");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+  const [showTemplateMarket, setShowTemplateMarket] = useState(false);
+  const [publicTemplates, setPublicTemplates] = useState<Template[]>([]);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateType, setNewTemplateType] = useState("novel");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
   const navigate = useNavigate();
 
   // Folder browser state
@@ -58,6 +68,35 @@ export default function DashboardPage() {
     loadTasks();
     client.get("/templates/").then((res) => setTemplates(res.data));
   }, []);
+
+  const loadPublicTemplates = async () => {
+    try {
+      const res = await client.get("/templates/public");
+      setPublicTemplates(res.data);
+    } catch {
+      setPublicTemplates([]);
+    }
+  };
+
+  const createTemplate = async () => {
+    if (!newTemplateName.trim() || !newTemplateContent.trim()) return;
+    await client.post("/templates/", {
+      name: newTemplateName,
+      type: newTemplateType,
+      content: newTemplateContent,
+      is_public: true,
+    });
+    setShowCreateTemplate(false);
+    setNewTemplateName("");
+    setNewTemplateContent("");
+    loadPublicTemplates();
+  };
+
+  const forkTemplate = async (templateId: number) => {
+    await client.post(`/templates/${templateId}/fork`);
+    client.get("/templates/").then((res) => setTemplates(res.data));
+    alert("模板已复制到你的模板库");
+  };
 
   const verifyDirectory = async (path: string) => {
     if (!path.trim()) { setDirStatus("idle"); setDirError(""); return; }
@@ -187,7 +226,10 @@ export default function DashboardPage() {
       <main className="dashboard-main">
         <div className="section-header">
           <h2>我的任务</h2>
-          <button className="btn-primary" onClick={() => setShowCreate(true)}>+ 新建任务</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-text" onClick={() => { setShowTemplateMarket(true); loadPublicTemplates(); }}>模板市场</button>
+            <button className="btn-primary" onClick={() => setShowCreate(true)}>+ 新建任务</button>
+          </div>
         </div>
 
         {showCreate && (
@@ -345,6 +387,81 @@ export default function DashboardPage() {
             </div>
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setShowBrowser(false)}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Market Modal */}
+      {showTemplateMarket && (
+        <div className="modal-overlay" onClick={() => setShowTemplateMarket(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 700, maxHeight: "80vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>模板市场</h3>
+              <button className="btn-primary" onClick={() => setShowCreateTemplate(true)} style={{ fontSize: 13, padding: "6px 12px" }}>
+                + 分享模板
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {publicTemplates.length === 0 ? (
+                <p style={{ color: "var(--color-text-secondary)", textAlign: "center", padding: 40 }}>暂无公共模板</p>
+              ) : (
+                publicTemplates.map((t) => (
+                  <div key={t.id} style={{
+                    padding: 16,
+                    background: "var(--color-bg-secondary)",
+                    borderRadius: 8,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>{t.name}</div>
+                      <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                        {TYPE_LABELS[t.type] || t.type} · 作者: {t.author_name || "系统"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 400 }}>
+                        {t.content.slice(0, 100)}...
+                      </div>
+                    </div>
+                    <button className="btn-save" onClick={() => forkTemplate(t.id)} style={{ fontSize: 13, padding: "6px 12px" }}>
+                      使用模板
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-cancel" onClick={() => setShowTemplateMarket(false)}>关闭</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Template Modal */}
+      {showCreateTemplate && (
+        <div className="modal-overlay" onClick={() => setShowCreateTemplate(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 600 }}>
+            <h3>分享模板</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input placeholder="模板名称" value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} />
+              <div className="type-selector">
+                {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={newTemplateType === key ? "active" : ""}
+                    onClick={() => setNewTemplateType(key)}
+                  >
+                    {TYPE_ICONS[key]} {label}
+                  </button>
+                ))}
+              </div>
+              <textarea placeholder="模板内容（Markdown 格式）" value={newTemplateContent} onChange={(e) => setNewTemplateContent(e.target.value)} rows={10} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setShowCreateTemplate(false)}>取消</button>
+              <button className="btn-save" onClick={createTemplate}>分享</button>
             </div>
           </div>
         </div>

@@ -121,3 +121,7 @@ if _FRONTEND_DIST.is_dir() and (_FRONTEND_DIST / "index.html").exists():
     log.info("Serving frontend SPA from %s", _FRONTEND_DIST)
 else:
     log.info("frontend/dist/ not found — run `npm run build` for single-port deploy")
+
+    @app.get("/", include_in_schema=False)
+    async def _dev_root():
+        return {"code": 0, "message": "success", "data": {"service": "ICE Data Workbench v3 API", "version": "3.0.0", "docs": "/docs", "note": "Frontend is running on http://localhost:5173 in development mode"}}
